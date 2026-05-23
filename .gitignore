@@ -1,0 +1,14 @@
+# Konfigurasi database (jangan diupload)
+config.php
+
+# Cache dan log sistem
+*.log
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

@@ -56,28 +56,11 @@ $list = $conn->query("SELECT * FROM sesi_ujian ORDER BY tanggal DESC, jam_mulai 
 
 $admin_page = 'sesi';
 $page_title = 'Sesi Ujian — BBU Tryout';
-require_once __DIR__ . '/partials/icons.php';
+$topbar_breadcrumb = 'Sesi Ujian';
+$topbar_title      = 'Kelola Sesi Ujian';
+
+include __DIR__ . '/partials/layout-start.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <?php include __DIR__ . '/partials/head.php'; ?>
-</head>
-<body>
-<div class="admin-wrapper">
-<?php include __DIR__ . '/partials/sidebar.php'; ?>
-
-  <main class="main-content">
-
-    <div class="page-toolbar">
-      <header class="page-header">
-        <h1>Sesi ujian</h1>
-        <p>Buat dan kelola jadwal ujian</p>
-      </header>
-      <a href="sesi.php?action=tambah" class="btn-admin-primary">
-        <?= admin_icon('plus') ?> Buat sesi baru
-      </a>
-    </div>
 
     <?php if ($msg): ?>
     <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
@@ -128,12 +111,12 @@ require_once __DIR__ . '/partials/icons.php';
               <div>
                 <label class="form-label">Jam Mulai *</label>
                 <input type="time" name="jam_mulai" class="form-input"
-                       value="<?= $edit['jam_mulai'] ?? '08:00' ?>" required>
+                       value="<?= isset($edit['jam_mulai']) ? substr($edit['jam_mulai'], 0, 5) : '00:00' ?>" required>
               </div>
               <div>
                 <label class="form-label">Jam Selesai *</label>
                 <input type="time" name="jam_selesai" class="form-input"
-                       value="<?= $edit['jam_selesai'] ?? '10:00' ?>" required>
+                       value="<?= isset($edit['jam_selesai']) ? substr($edit['jam_selesai'], 0, 5) : '23:59' ?>" required>
               </div>
             </div>
 
@@ -153,6 +136,11 @@ require_once __DIR__ . '/partials/icons.php';
               <small style="color:var(--text-muted);font-size:12px;">Diambil acak dari bank soal</small>
             </div>
 
+            <div style="grid-column:1/-1;padding:12px 14px;background:#eff6ff;border-radius:8px;font-size:13px;color:#1e40af;line-height:1.5;">
+              <strong>Agar peserta bisa melihat ujian:</strong> status <em>Aktif</em>, tanggal = hari ini,
+              program sama dengan peserta (SOU/GMDSS). Default jam 00:00–23:59 = seharian.
+            </div>
+
           </div>
           <div style="display:flex;gap:10px;">
             <button type="submit" class="btn-primary">Simpan sesi</button>
@@ -165,7 +153,13 @@ require_once __DIR__ . '/partials/icons.php';
 
     <!-- TABEL SESI -->
     <div class="card">
-      <div class="card-header"><h3>Daftar sesi ujian</h3></div>
+      <div class="card-header">
+      <h3>Daftar sesi ujian</h3>
+      <a href="sesi.php?action=tambah" class="btn-admin-primary" 
+        style="font-size:13px;padding:8px 14px;">
+        <?= admin_icon('plus') ?> Buat sesi baru
+      </a>
+    </div>
       <?php if ($list->num_rows > 0): ?>
       <table>
         <thead>
@@ -180,9 +174,18 @@ require_once __DIR__ . '/partials/icons.php';
           </tr>
         </thead>
         <tbody>
-        <?php while ($s = $list->fetch_assoc()): ?>
+        <?php
+        $hari_ini = date('Y-m-d');
+        while ($s = $list->fetch_assoc()):
+            $tampil_peserta = ($s['status'] === 'aktif' && $s['tanggal'] === $hari_ini);
+        ?>
           <tr>
-            <td style="font-weight:500;"><?= htmlspecialchars($s['nama_sesi']) ?></td>
+            <td style="font-weight:500;">
+              <?= htmlspecialchars($s['nama_sesi']) ?>
+              <?php if ($tampil_peserta): ?>
+              <span class="badge badge-aktif" style="margin-left:6px;font-size:10px;">Tampil ke peserta</span>
+              <?php endif; ?>
+            </td>
             <td><span class="badge badge-<?= strtolower($s['jenis']) ?>"><?= $s['jenis'] ?></span></td>
             <td style="font-size:13px;">
               <?= date('d M Y', strtotime($s['tanggal'])) ?><br>
@@ -205,24 +208,32 @@ require_once __DIR__ . '/partials/icons.php';
                 <?= $s['status'] === 'aktif' ? '● Aktif' : '○ Nonaktif' ?>
               </a>
             </td>
+
             <td>
-              <a href="sesi.php?edit=<?= $s['id'] ?>" class="btn-link">Edit</a>
-              <a href="sesi.php?hapus=<?= $s['id'] ?>" class="btn-link-danger"
-                 onclick="return confirm('Hapus sesi ini?')">Hapus</a>
+              <div class="action-buttons">
+                <a href="sesi.php?edit=<?= $s['id'] ?>" 
+                  class="btn-icon btn-icon-edit" 
+                  data-tooltip="Edit sesi">
+                  <i class="fas fa-pen"></i>
+                </a>
+                <a href="sesi.php?hapus=<?= $s['id'] ?>" 
+                  class="btn-icon btn-icon-delete" 
+                  data-tooltip="Hapus sesi"
+                  onclick="return confirm('Hapus sesi <?= htmlspecialchars(addslashes($s['nama_sesi'])) ?>?')">
+                  <i class="fas fa-trash-alt"></i>
+                </a>
+              </div>
             </td>
           </tr>
         <?php endwhile; ?>
         </tbody>
       </table>
       <?php else: ?>
-      <div class="empty-state">
-        <p><strong>Belum ada sesi ujian</strong></p>
-        <p>Gunakan tombol <strong>Buat sesi baru</strong> di atas.</p>
-      </div>
+        <div class="empty-state">
+          <p><strong>Belum ada sesi ujian</strong></p>
+          <p>Gunakan tombol <strong>Buat sesi baru</strong> di atas untuk membuat jadwal ujian.</p>
+        </div>
       <?php endif; ?>
     </div>
 
-  </main>
-</div>
-</body>
-</html>
+<?php include __DIR__ . '/partials/layout-end.php'; ?>

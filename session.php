@@ -1,21 +1,27 @@
 <?php
+/**
+ * Session PHP & pengecekan login.
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function redirect(string $url): void {
-    header("Location: $url");
-    exit();
+function redirect(string $path): void
+{
+    header('Location: ' . url($path));
+    exit;
 }
 
-function cekAdmin() {
+function cekAdmin(): void
+{
     if (!isset($_SESSION['admin_id'])) {
-        redirect('/bbu-tryout/index.php');
+        redirect('/index.php');
     }
 }
 
-function cekPeserta() {
+function cekPeserta(): void
+{
     if (!isset($_SESSION['peserta_id'])) {
-        redirect('/bbu-tryout/index.php');
+        redirect('/index.php');
     }
 }

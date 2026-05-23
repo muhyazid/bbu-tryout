@@ -2,8 +2,8 @@
 require_once 'config.php';
 
 // Kalau sudah login, langsung redirect
-if (isset($_SESSION['admin_id'])) redirect('/bbu-tryout/admin/dashboard.php');
-if (isset($_SESSION['peserta_id'])) redirect('/bbu-tryout/peserta/dashboard.php');
+if (isset($_SESSION['admin_id'])) redirect('/admin/dashboard.php');
+if (isset($_SESSION['peserta_id'])) redirect('/peserta/dashboard.php');
 
 $error = '';
 
@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($admin && $admin['password'] === md5($pass)) {
         $_SESSION['admin_id']   = $admin['id'];
         $_SESSION['admin_nama'] = $admin['nama'];
-        redirect('/bbu-tryout/admin/dashboard.php');
+        redirect('/admin/dashboard.php');
     }
 
     // Cek peserta
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['peserta_id']   = $peserta['id'];
         $_SESSION['peserta_nama'] = $peserta['nama'];
         $_SESSION['peserta_jenis']= $peserta['jenis'];
-        redirect('/bbu-tryout/peserta/dashboard.php');
+        redirect('/peserta/dashboard.php');
     }
 
     $error = 'Username / nomor peserta atau password salah.';

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/session.php';
+require_once __DIR__ . '/config.php';
 
 $_SESSION = [];
 if (ini_get('session.use_cookies')) {
@@ -8,5 +8,4 @@ if (ini_get('session.use_cookies')) {
 }
 session_destroy();
 
-header('Location: /bbu-tryout/index.php?logout=1');
-exit();
+redirect('/index.php?logout=1');

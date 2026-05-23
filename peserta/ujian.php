@@ -7,18 +7,16 @@ $peserta_id    = $_SESSION['peserta_id'];
 $peserta_jenis = $_SESSION['peserta_jenis'];
 $peserta_nama  = $_SESSION['peserta_nama'];
 
-// Validasi sesi
-$st = $conn->prepare("SELECT * FROM sesi_ujian WHERE id=? AND status='aktif' AND jenis=?");
-$st->bind_param("is", $sesi_id, $peserta_jenis);
-$st->execute();
-$sesi = $st->get_result()->fetch_assoc();
-if (!$sesi) redirect('/bbu-tryout/peserta/dashboard.php');
+$sesi = validasi_sesi_peserta($conn, $sesi_id, $peserta_jenis);
+if (!$sesi) {
+    redirect('/peserta/dashboard.php');
+}
 
 // Cek sudah submit
 $cek = $conn->prepare("SELECT id FROM hasil_ujian WHERE peserta_id=? AND sesi_id=?");
 $cek->bind_param("ii", $peserta_id, $sesi_id);
 $cek->execute();
-if ($cek->get_result()->num_rows > 0) redirect('/bbu-tryout/peserta/dashboard.php');
+if ($cek->get_result()->num_rows > 0) redirect('/peserta/dashboard.php');
 
 $phase = 'exam';
 $result = null;
@@ -135,7 +133,7 @@ $timer_awal = sprintf('%02d:00', (int)$sesi['durasi_menit']);
       </div>
     </div>
 
-    <a href="/bbu-tryout/peserta/dashboard.php" class="btn-back-dashboard">
+    <a href="<?= url('/peserta/dashboard.php') ?>" class="btn-back-dashboard">
       Kembali ke beranda
     </a>
   </div>
@@ -386,7 +384,7 @@ if (MODE === 'ujian') {
 
 // ===== LOG AJAX =====
 function logAktivitas(jenis) {
-    fetch('/bbu-tryout/peserta/log.php', {
+    fetch('<?= url('/peserta/log.php') ?>', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sesi_id: SESI_ID, jenis: jenis })

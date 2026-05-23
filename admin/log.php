@@ -42,7 +42,6 @@ $sesi_opt    = $conn->query("SELECT id, nama_sesi FROM sesi_ujian ORDER BY tangg
 
 $admin_page = 'log';
 $page_title = 'Log Aktivitas — BBU Tryout';
-require_once __DIR__ . '/partials/icons.php';
 
 $log_labels = [
     'pindah_tab'        => 'Pindah tab',
@@ -51,30 +50,22 @@ $log_labels = [
     'login'             => 'Login',
     'logout'            => 'Logout',
 ];
+
+$extra_head = <<<'HTML'
+<style>
+.log-tab{background:#fef2f2;color:#b91c1c}
+.log-fs{background:#fef3c7;color:#92400e}
+.log-submit{background:#e6f4ec;color:#166534}
+.log-login{background:#e8f0fe;color:#1a3c6e}
+.log-logout{background:#f1f5f9;color:#64748b}
+.log-badge{padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600}
+</style>
+HTML;
+$topbar_breadcrumb = 'Log Aktivitas';
+$topbar_title      = 'Log Aktivitas';
+
+include __DIR__ . '/partials/layout-start.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <?php include __DIR__ . '/partials/head.php'; ?>
-    <style>
-        .log-tab     { background:#fef2f2; color:#b91c1c; }
-        .log-fs      { background:#fef3c7; color:#92400e; }
-        .log-submit  { background:#e6f4ec; color:#166534; }
-        .log-login   { background:#e8f0fe; color:#1a3c6e; }
-        .log-logout  { background:#f1f5f9; color:#64748b; }
-        .log-badge   { padding:3px 10px; border-radius:6px; font-size:12px; font-weight:600; }
-    </style>
-</head>
-<body>
-<div class="admin-wrapper">
-<?php include __DIR__ . '/partials/sidebar.php'; ?>
-
-  <main class="main-content">
-
-    <header class="page-header">
-      <h1>Log aktivitas</h1>
-      <p>Monitor aktivitas peserta saat ujian</p>
-    </header>
 
     <!-- RINGKASAN KECURANGAN -->
     <?php if ($ringkasan->num_rows > 0): ?>
@@ -180,7 +171,10 @@ $log_labels = [
     <!-- TABEL LOG -->
     <div class="card">
       <div class="card-header">
-        <h3>Detail log<span class="count-pill"><?= $logs->num_rows ?> entri</span></h3>
+        <h3>Detail log <span class="count-pill"><?= $logs->num_rows ?> entri</span></h3>
+        <a href="log.php" class="btn-admin-primary" style="font-size:13px;padding:8px 14px;">
+          <i class="fas fa-rotate-right" style="font-size:12px;"></i> Refresh
+        </a>
       </div>
       <?php if ($logs->num_rows > 0): ?>
       <table>
@@ -237,7 +231,4 @@ $log_labels = [
       <?php endif; ?>
     </div>
 
-  </main>
-</div>
-</body>
-</html>
+<?php include __DIR__ . '/partials/layout-end.php'; ?>

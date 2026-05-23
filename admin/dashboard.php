@@ -1,60 +1,48 @@
 <?php
-require_once '../config.php';
+require_once dirname(__DIR__) . '/config.php';
 cekAdmin();
-require_once __DIR__ . '/partials/icons.php';
 
-$total_peserta  = $conn->query("SELECT COUNT(*) as n FROM peserta")->fetch_assoc()['n'];
-$total_soal     = $conn->query("SELECT COUNT(*) as n FROM soal")->fetch_assoc()['n'];
-$sesi_aktif     = $conn->query("SELECT COUNT(*) as n FROM sesi_ujian WHERE status='aktif'")->fetch_assoc()['n'];
-$ujian_hari_ini = $conn->query("SELECT COUNT(*) as n FROM hasil_ujian WHERE DATE(submitted_at)=CURDATE()")->fetch_assoc()['n'];
-$sesi_list = $conn->query("SELECT * FROM sesi_ujian ORDER BY created_at DESC LIMIT 5");
+$total_peserta  = (int) $conn->query('SELECT COUNT(*) AS n FROM peserta')->fetch_assoc()['n'];
+$total_soal     = (int) $conn->query('SELECT COUNT(*) AS n FROM soal')->fetch_assoc()['n'];
+$sesi_aktif     = (int) $conn->query("SELECT COUNT(*) AS n FROM sesi_ujian WHERE status='aktif'")->fetch_assoc()['n'];
+$ujian_hari_ini = (int) $conn->query('SELECT COUNT(*) AS n FROM hasil_ujian WHERE DATE(submitted_at)=CURDATE()')->fetch_assoc()['n'];
+$sesi_list      = $conn->query('SELECT * FROM sesi_ujian ORDER BY created_at DESC LIMIT 5');
 
 $admin_page = 'dashboard';
 $page_title = 'Dashboard — BBU Tryout';
-$nama_admin = htmlspecialchars($_SESSION['admin_nama'] ?? 'Admin');
+$nama_admin = e($_SESSION['admin_nama'] ?? 'Admin');
+$topbar_breadcrumb = 'Dashboard';
+$topbar_title      = 'Selamat datang, ' . $nama_admin;
+
+include __DIR__ . '/partials/layout-start.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <?php include __DIR__ . '/partials/head.php'; ?>
-</head>
-<body>
-<div class="admin-wrapper">
-<?php include __DIR__ . '/partials/sidebar.php'; ?>
-
-  <main class="main-content">
-
-    <header class="page-header">
-      <h1>Selamat datang, <?= $nama_admin ?></h1>
-      <p>Ringkasan sistem — Bharuna Bhakti Utama</p>
-    </header>
 
     <div class="stat-grid">
       <div class="stat-card">
         <div class="stat-icon"><?= admin_icon('peserta') ?></div>
         <div class="stat-info">
-          <h3><?= (int)$total_peserta ?></h3>
+          <h3><?= $total_peserta ?></h3>
           <p>Total peserta</p>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon"><?= admin_icon('soal') ?></div>
         <div class="stat-info">
-          <h3><?= (int)$total_soal ?></h3>
+          <h3><?= $total_soal ?></h3>
           <p>Bank soal</p>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon"><?= admin_icon('sesi') ?></div>
         <div class="stat-info">
-          <h3><?= (int)$sesi_aktif ?></h3>
+          <h3><?= $sesi_aktif ?></h3>
           <p>Sesi aktif</p>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon"><?= admin_icon('hasil') ?></div>
         <div class="stat-info">
-          <h3><?= (int)$ujian_hari_ini ?></h3>
+          <h3><?= $ujian_hari_ini ?></h3>
           <p>Ujian hari ini</p>
         </div>
       </div>
@@ -94,9 +82,9 @@ $nama_admin = htmlspecialchars($_SESSION['admin_nama'] ?? 'Admin');
           <tbody>
           <?php while ($s = $sesi_list->fetch_assoc()): ?>
             <tr>
-              <td style="font-weight:500;"><?= htmlspecialchars($s['nama_sesi']) ?></td>
-              <td><span class="badge badge-<?= strtolower($s['jenis']) ?>"><?= htmlspecialchars($s['jenis']) ?></span></td>
-              <td><span class="badge badge-<?= $s['status'] ?>"><?= ucfirst($s['status']) ?></span></td>
+              <td style="font-weight:500;"><?= e($s['nama_sesi']) ?></td>
+              <td><span class="badge badge-<?= strtolower($s['jenis']) ?>"><?= e($s['jenis']) ?></span></td>
+              <td><span class="badge badge-<?= e($s['status']) ?>"><?= ucfirst($s['status']) ?></span></td>
             </tr>
           <?php endwhile; ?>
           </tbody>
@@ -110,7 +98,4 @@ $nama_admin = htmlspecialchars($_SESSION['admin_nama'] ?? 'Admin');
       </section>
     </div>
 
-  </main>
-</div>
-</body>
-</html>
+<?php include __DIR__ . '/partials/layout-end.php'; ?>

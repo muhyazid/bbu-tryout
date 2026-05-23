@@ -40,23 +40,11 @@ $stat = $conn->query("
 
 $admin_page = 'hasil';
 $page_title = 'Rekap Nilai — BBU Tryout';
-require_once __DIR__ . '/partials/icons.php';
+$topbar_breadcrumb = 'Rekap Nilai';
+$topbar_title      = 'Rekap Nilai';
+
+include __DIR__ . '/partials/layout-start.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <?php include __DIR__ . '/partials/head.php'; ?>
-</head>
-<body>
-<div class="admin-wrapper">
-<?php include __DIR__ . '/partials/sidebar.php'; ?>
-
-  <main class="main-content">
-
-    <header class="page-header">
-      <h1>Rekap nilai</h1>
-      <p>Hasil ujian semua peserta</p>
-    </header>
 
     <!-- STAT RINGKAS -->
     <?php if ($stat['total'] > 0): ?>
@@ -135,10 +123,11 @@ require_once __DIR__ . '/partials/icons.php';
     <!-- TABEL HASIL -->
     <div class="card">
       <div class="card-header">
-        <h3>Daftar hasil ujian<span class="count-pill"><?= $hasil->num_rows ?> data</span></h3>
+        <h3>Daftar hasil ujian <span class="count-pill"><?= $hasil->num_rows ?> data</span></h3>
         <?php if ($hasil->num_rows > 0): ?>
-        <a href="hasil.php?export=1&<?= http_build_query($_GET) ?>" class="link-muted">
-          Export CSV
+        <a href="hasil.php?export=1&<?= http_build_query($_GET) ?>" 
+          class="btn-admin-primary" style="font-size:13px;padding:8px 14px;">
+          <i class="fas fa-download" style="font-size:12px;"></i> Export CSV
         </a>
         <?php endif; ?>
       </div>
@@ -218,9 +207,4 @@ require_once __DIR__ . '/partials/icons.php';
       <?php endif; ?>
     </div>
 
-  </main>
-</div>
-
-
-</body>
-</html>
+<?php include __DIR__ . '/partials/layout-end.php'; ?>

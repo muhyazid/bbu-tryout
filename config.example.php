@@ -1,18 +1,16 @@
 <?php
-session_start();
+/**
+ * Contoh setup — salin menjadi config.php TIDAK perlu jika struktur default dipakai.
+ *
+ * Saat ini config.php hanya memuat:
+ *   includes/constants.php  → APP_BASE, APP_ROOT
+ *   includes/helpers.php    → url(), e()
+ *   session.php             → login & redirect
+ *   database.php            → koneksi MySQL
+ *
+ * Untuk mengubah database, edit file database.php langsung
+ * (atau salin database.php → database.local.php dan sesuaikan config.php).
+ */
 
-$host     = 'localhost';
-$dbname   = 'bbu_tryout';
-$username = 'root';
-$password = ''; // Isi password MySQL kamu
-
-$conn = new mysqli($host, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die("Koneksi gagal: " . $conn->connect_error);
-}
-$conn->set_charset("utf8");
-
-function redirect($url) { header("Location: $url"); exit(); }
-function cekAdmin()   { if (!isset($_SESSION['admin_id']))   redirect('/bbu-tryout/index.php'); }
-function cekPeserta() { if (!isset($_SESSION['peserta_id'])) redirect('/bbu-tryout/index.php'); }
-?>
+// Contoh override base URL jika tidak di /bbu-tryout:
+// define('APP_BASE', '/nama-folder-anda');

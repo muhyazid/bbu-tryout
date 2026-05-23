@@ -28,7 +28,7 @@ $nav = [
         <?php endforeach; ?>
     </nav>
     <div class="sidebar-footer">
-        <a href="/bbu-tryout/logout.php">
+        <a href="<?= url('/logout.php') ?>">
             <span class="nav-icon"><?= admin_icon('logout') ?></span>
             Keluar
         </a>

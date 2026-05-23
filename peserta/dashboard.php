@@ -7,21 +7,7 @@ $peserta_nama = $_SESSION['peserta_nama'];
 $peserta_jenis= $_SESSION['peserta_jenis'];
 $nama_depan   = explode(' ', $peserta_nama)[0];
 
-$today = date('Y-m-d');
-$now   = date('H:i:s');
-
-$stmt = $conn->prepare("
-    SELECT * FROM sesi_ujian
-    WHERE status = 'aktif'
-    AND jenis = ?
-    AND tanggal = ?
-    AND jam_mulai <= ?
-    AND jam_selesai >= ?
-    LIMIT 1
-");
-$stmt->bind_param("ssss", $peserta_jenis, $today, $now, $now);
-$stmt->execute();
-$sesi = $stmt->get_result()->fetch_assoc();
+$sesi = cari_sesi_aktif_peserta($conn, $peserta_jenis);
 
 $sudah_kerjakan = false;
 if ($sesi) {
@@ -44,20 +30,13 @@ $stmt2->execute();
 $riwayat = $stmt2->get_result();
 
 $page_title = 'Beranda — ' . $peserta_nama;
-?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <?php include __DIR__ . '/partials/head.php'; ?>
-</head>
-<body class="peserta-page">
-<?php include __DIR__ . '/partials/header.php'; ?>
 
-<main class="peserta-main">
+include __DIR__ . '/partials/layout-start.php';
+?>
 
     <section class="peserta-welcome">
-        <h2>Selamat datang, <?= htmlspecialchars($nama_depan) ?></h2>
-        <p>Program <?= htmlspecialchars($peserta_jenis) ?> — gunakan halaman ini untuk memulai ujian dan melihat nilai.</p>
+        <h2>Selamat datang, <?= e($nama_depan) ?></h2>
+        <p>Program <?= e($peserta_jenis) ?> — gunakan halaman ini untuk memulai ujian dan melihat nilai.</p>
     </section>
 
     <?php if ($sesi && !$sudah_kerjakan): ?>
@@ -66,7 +45,7 @@ $page_title = 'Beranda — ' . $peserta_nama;
             <span class="dot" aria-hidden="true"></span>
             Ujian tersedia sekarang
         </p>
-        <h3 id="ujian-aktif-title"><?= htmlspecialchars($sesi['nama_sesi']) ?></h3>
+        <h3 id="ujian-aktif-title"><?= e($sesi['nama_sesi']) ?></h3>
         <div class="status-meta">
             <span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -76,8 +55,13 @@ $page_title = 'Beranda — ' . $peserta_nama;
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <?= (int)$sesi['durasi_menit'] ?> menit
             </span>
-            <span><?= htmlspecialchars($sesi['jenis']) ?> · <?= htmlspecialchars(ucfirst($sesi['mode'])) ?></span>
+            <span><?= e($sesi['jenis']) ?> · <?= e(ucfirst($sesi['mode'])) ?></span>
         </div>
+        <?php if (!empty($sesi['info_jadwal'])): ?>
+        <div class="alert-box" role="note" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af;">
+            <?= e($sesi['info_jadwal']) ?>
+        </div>
+        <?php endif; ?>
         <div class="alert-box" role="note">
             <strong>Sebelum mulai:</strong> Setelah Anda menekan tombol di bawah, waktu ujian langsung berjalan.
             Jangan menutup browser atau berpindah ke aplikasi lain selama ujian.
@@ -97,7 +81,7 @@ $page_title = 'Beranda — ' . $peserta_nama;
         </div>
         <h3>Ujian sudah dikerjakan</h3>
         <p class="status-desc">
-            <strong><?= htmlspecialchars($sesi['nama_sesi']) ?></strong><br>
+            <strong><?= e($sesi['nama_sesi']) ?></strong><br>
             Nilai Anda tercatat. Lihat detail di tabel riwayat di bawah.
         </p>
     </section>
@@ -141,9 +125,9 @@ $page_title = 'Beranda — ' . $peserta_nama;
             ?>
                 <tr>
                     <td data-label="Sesi ujian">
-                        <div class="sesi-name"><?= htmlspecialchars($r['nama_sesi']) ?></div>
-                        <span class="tag tag--<?= $jenis_lower === 'gmdss' ? 'gmdss' : 'sou' ?>"><?= htmlspecialchars($r['jenis']) ?></span>
-                        <span class="tag tag--<?= htmlspecialchars($r['mode']) ?>"><?= htmlspecialchars(ucfirst($r['mode'])) ?></span>
+                        <div class="sesi-name"><?= e($r['nama_sesi']) ?></div>
+                        <span class="tag tag--<?= $jenis_lower === 'gmdss' ? 'gmdss' : 'sou' ?>"><?= e($r['jenis']) ?></span>
+                        <span class="tag tag--<?= e($r['mode']) ?>"><?= e(ucfirst($r['mode'])) ?></span>
                     </td>
                     <td data-label="Nilai">
                         <span class="score-value <?= $lulus ? 'score-value--pass' : 'score-value--fail' ?>">
@@ -175,6 +159,4 @@ $page_title = 'Beranda — ' . $peserta_nama;
         <?php endif; ?>
     </section>
 
-</main>
-</body>
-</html>
+<?php include __DIR__ . '/partials/layout-end.php'; ?>

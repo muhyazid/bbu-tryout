@@ -3,21 +3,30 @@
 .admin-wrapper {
     min-height: 100vh;
     background: #f4f6f9;
+    display: stretch;
 }
 
 /* Sidebar */
 .sidebar {
-    width: 248px;
-    background: #1a3c6e;
-    box-shadow: 2px 0 12px rgba(26, 60, 110, 0.08);
+    width: 245px;
+    min-height: 100vh;
+    background: #1e2d4e;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
 }
 
 .sidebar-logo {
-    padding: 18px 16px;
+    height: 64px;                              
+    padding: 0 16px;                           
     display: flex;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    flex-shrink: 0;
 }
 
 .sidebar-mark {
@@ -84,8 +93,23 @@
 
 /* Main */
 .main-content {
-    padding: 28px 32px;
-    max-width: 1200px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #f1f5f9;
+    overflow: hidden;
+    margin: 0;              
+    padding: 0;
+}
+
+.main-inner {
+    flex: 1;
+    padding: 24px 28px;
+    overflow-y: scroll;
+    overflow-y: auto;
+    min-height: 0;
+    
 }
 
 .page-header {
@@ -105,7 +129,7 @@
     margin-top: 4px;
 }
 
-.page-toolbar {
+/* .page-toolbar {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -116,7 +140,7 @@
 
 .page-toolbar .page-header {
     margin-bottom: 0;
-}
+} */
 
 /* Stat cards */
 .stat-grid {
@@ -429,4 +453,854 @@ textarea.form-input {
         margin-left: 0;
         padding: 20px 16px;
     }
+}
+
+/* Bank soal — materi */
+.breadcrumb {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 16px;
+}
+
+.breadcrumb a {
+    color: #1a3c6e;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+/* === MATERI CARD === */
+.materi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.materi-card {
+    background: #fff;
+    border: 1px solid #e4e8ef;
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    transition: box-shadow 0.15s;
+}
+
+.materi-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+
+.materi-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2332;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.materi-count {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e2a45;
+    line-height: 1;
+}
+
+.materi-count span {
+    font-size: 13px;
+    font-weight: 400;
+    color: #6b7280;
+}
+
+/* Tombol hapus di sudut kanan atas card */
+.materi-card-hapus {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 5px;
+    color: #c0a0a0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.materi-card-hapus:hover {
+    background: #fff0f0;
+    color: #c0392b;
+}
+
+.materi-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.materi-actions a {
+    flex: 1;
+    text-align: center;
+    min-width: 100px;
+}
+
+.btn-materi-primary {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    background: #1e2a45;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+.btn-materi-primary:hover { background: #15305a; color: #fff; }
+
+.btn-materi-secondary {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    background: #fff;
+    color: #1e2a45;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-materi-secondary:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.panel-materi-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.panel-materi-bar h3 {
+    margin: 0;
+    font-size: 17px;
+}
+
+/* === FORM TAMBAH MATERI === */
+.add-materi-box {
+    background: #fff;
+    border: 1px solid #e4e8ef;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.add-materi-box h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2332;
+    margin: 0 0 14px 0;
+}
+
+.add-materi-form {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.add-materi-form > div { display: flex; flex-direction: column; }
+
+.add-materi-action {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===================================
+   TABLE PESERTA - CSS STYLING
+   (Untuk: admin/peserta.php)
+   === ================================ */
+ 
+/* TABLE STYLING */
+.table-responsive {
+    overflow-x: auto;
+}
+ 
+.table-modern {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+ 
+.table-modern thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+ 
+.table-modern thead th {
+    padding: 16px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: none;
+}
+ 
+.table-modern tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #e8ecf1;
+    font-size: 14px;
+}
+ 
+.table-row-hover:hover {
+    background-color: #f8f9fb;
+    transition: background-color 0.2s ease;
+}
+
+ 
+/* TYPOGRAPHY */
+.font-weight-600 {
+    font-weight: 600;
+    color: #2d3748;
+}
+ 
+.text-muted {
+    color: #718096;
+}
+ 
+.text-sm {
+    font-size: 13px;
+}
+ 
+.text-center {
+    text-align: center;
+}
+ 
+/* CODE BADGE */
+.code-badge {
+    display: inline-block;
+    background: #f0f2f5;
+    color: #2d3748;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid #dfe4e8;
+}
+ 
+/* BADGE */
+.badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+ 
+.badge-reguler {
+    background: #e6f2ff;
+    color: #0052cc;
+}
+ 
+.badge-intensif {
+    background: #fff3cd;
+    color: #856404;
+}
+ 
+.badge-online {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+
+ 
+/* ACTION GROUP */
+.action-group {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+}
+ 
+/* EMPTY STATE */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #718096;
+}
+ 
+.empty-icon {
+    font-size: 64px;
+    color: #cbd5e0;
+    margin-bottom: 20px;
+}
+ 
+.empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0 0 10px 0;
+}
+ 
+.empty-desc {
+    font-size: 14px;
+    margin: 0;
+}
+ 
+/* COUNT PILL */
+.count-pill {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 12px;
+}
+ 
+/* CARD HEADER */
+.card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e4e8ef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+ 
+.card-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a2332;
+}
+ 
+/* RESPONSIVE - Mobile */
+@media (max-width: 768px) {
+    .table-modern thead th,
+    .table-modern tbody td {
+        padding: 12px 8px;
+        font-size: 12px;
+    }
+ 
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+ 
+    .action-group {
+        gap: 4px;
+    }
+}
+
+/* ===== ICON BUTTONS (Font Awesome) ===== */
+.action-buttons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    border: 1px solid #e4e8ef;
+    background: #fff;
+    color: #555;
+    text-decoration: none;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-icon:hover         { background: #f3f4f6; color: #222; }
+.btn-icon-delete:hover  { background: #fff0f0; color: #c0392b; border-color: #f5c6c6; }
+
+/* === TABLE PESERTA === */
+table { width: 100%; border-collapse: collapse; }
+
+table thead tr { background: var(--bg-secondary, #f5f7fa); }
+
+table thead th {
+    padding: 9px 14px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+    border-bottom: 1px solid #e4e8ef;
+}
+
+table tbody tr { border-bottom: 1px solid #e4e8ef; }
+table tbody tr:last-child { border-bottom: none; }
+table tbody tr:hover { background: #f9fafb; }
+
+table tbody td {
+    padding: 9px 14px;
+    font-size: 13px;
+}
+
+/* Nomor peserta */
+code {
+    font-family: monospace;
+    font-size: 12px;
+    background: #f3f4f6;
+    border: 1px solid #e4e8ef;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #555;
+}
+
+/* Badge program */
+.badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 9px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-sou {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+.badge-gmdss {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Count pill di card header */
+.count-pill {
+    background: #1e2a45;
+    color: #e8edf5;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+}
+
+.btn-act {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    border: 1px solid #e4e8ef;
+    background: #fff;
+    color: #666;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-act:hover        { background: #f3f4f6; color: #333; }
+.btn-act-del:hover    { background: #fcebeb; color: #a32d2d; border-color: #f7c1c1; }
+
+/* === MODAL === */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.modal-overlay.aktif {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 580px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(16px) scale(0.98);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    opacity: 0;
+}
+
+.modal-overlay.aktif .modal-box {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e4e8ef;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a2332;
+}
+
+.modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #888;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.modal-close:hover {
+    background: #fff0f0;
+    color: #c0392b;
+    border-color: #f5c6c6;
+}
+
+.modal-body { padding: 20px; }
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.form-grid-full { grid-column: 1 / -1; }
+
+.modal-footer {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
+}
+
+/* Required asterisk */
+.required {
+    color: #c0392b;
+    font-weight: 600;
+    margin-left: 2px;
+}
+
+/* Input + cek nomor */
+.input-check-wrap {
+    position: relative;
+}
+
+.nomor-status {
+    display: block;
+    font-size: 12px;
+    margin-top: 4px;
+    font-weight: 500;
+    min-height: 16px;
+}
+
+.nomor-ok   { color: #1e7e34; }
+.nomor-taken { color: #c0392b; }
+
+/* Input + eye password */
+.input-eye-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-eye-wrap .form-input {
+    padding-right: 38px;
+    width: 100%;
+}
+
+.btn-eye {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.btn-eye:hover { color: #333; }
+
+/* Form hint */
+.form-hint {
+    display: block;
+    font-size: 12px;
+    color: #6b7a99;
+    margin-top: 5px;
+}
+
+/* Tombol secondary hover */
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: inherit;
+}
+
+.btn-secondary:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+/* === FILTER GROUP === */
+.filter-group {
+    display: inline-flex;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+.filter-btn {
+    padding: 7px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4b5563;
+    background: #fff;
+    text-decoration: none;
+    border-right: 1px solid #d1d5db;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.filter-btn:last-child { border-right: none; }
+
+.filter-btn:hover { background: #f3f4f6; color: #111; }
+
+.filter-btn-active {
+    background: #1e2a45;
+    color: #fff;
+}
+
+.filter-btn-active:hover { background: #1e2a45; color: #fff; }
+
+/* === PAGE HEADER === */
+.ph-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 28px 0 24px;
+    border-bottom: 1px solid #e9ecf0;
+    margin-bottom: 28px;
+}
+
+.ph-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ph-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.ph-breadcrumb a {
+    font-size: 12px;
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.ph-breadcrumb a:hover { color: #475569; }
+
+.ph-sep {
+    font-size: 12px;
+    color: #cbd5e1;
+}
+
+.ph-current {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.ph-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.ph-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+}
+
+.ph-right {
+    flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+    .ph-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* === TOPBAR === */
+.topbar {
+    height: 64px;
+    padding: 0 28px;
+    background: #fff;
+    border-bottom: 1px solid #e4e8ef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.topbar-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.topbar-breadcrumb {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.topbar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.topbar-date {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.topbar-sep {
+    width: 1px;
+    height: 20px;
+    background: #e4e8ef;
+}
+
+.topbar-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #1e2d4e;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.topbar-name {
+    font-size: 12px;
+    color: #374151;
+    font-weight: 500;
+}
+
+/* === FOOTER === */
+.admin-footer {
+    background: #fff;
+    border-top: 1px solid #e4e8ef;
+    padding: 0 28px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.footer-left {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.footer-left strong {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.footer-right {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.sidebar-footer {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin-top: auto;
+    flex-shrink: 0;
 }

@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute();
     $admin = $stmt->get_result()->fetch_assoc();
 
-    if ($admin && $admin['password'] === md5($pass)) {
+    if ($admin && password_verify($pass, $admin['password'])) {
         $_SESSION['admin_id']   = $admin['id'];
         $_SESSION['admin_nama'] = $admin['nama'];
         redirect('/admin/dashboard.php');
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt2->execute();
     $peserta = $stmt2->get_result()->fetch_assoc();
 
-    if ($peserta && $peserta['password'] === md5($pass)) {
+    if ($peserta && password_verify($pass, $peserta['password'])) {
         $_SESSION['peserta_id']   = $peserta['id'];
         $_SESSION['peserta_nama'] = $peserta['nama'];
         $_SESSION['peserta_jenis']= $peserta['jenis'];

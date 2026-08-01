@@ -2,10 +2,18 @@
 require_once dirname(__DIR__) . '/config.php';
 cekAdmin();
 
-$total_peserta  = (int) $conn->query('SELECT COUNT(*) AS n FROM peserta')->fetch_assoc()['n'];
-$total_soal     = (int) $conn->query('SELECT COUNT(*) AS n FROM soal')->fetch_assoc()['n'];
-$sesi_aktif     = (int) $conn->query("SELECT COUNT(*) AS n FROM sesi_ujian WHERE status='aktif'")->fetch_assoc()['n'];
-$ujian_hari_ini = (int) $conn->query('SELECT COUNT(*) AS n FROM hasil_ujian WHERE DATE(submitted_at)=CURDATE()')->fetch_assoc()['n'];
+$stat = $conn->query("
+    SELECT
+        (SELECT COUNT(*) FROM peserta)                                    AS total_peserta,
+        (SELECT COUNT(*) FROM soal)                                       AS total_soal,
+        (SELECT COUNT(*) FROM sesi_ujian WHERE status='aktif')            AS sesi_aktif,
+        (SELECT COUNT(*) FROM hasil_ujian WHERE DATE(submitted_at)=CURDATE()) AS ujian_hari_ini
+")->fetch_assoc();
+
+$total_peserta  = (int) $stat['total_peserta'];
+$total_soal     = (int) $stat['total_soal'];
+$sesi_aktif     = (int) $stat['sesi_aktif'];
+$ujian_hari_ini = (int) $stat['ujian_hari_ini'];
 $sesi_list      = $conn->query('SELECT * FROM sesi_ujian ORDER BY created_at DESC LIMIT 5');
 
 $admin_page = 'dashboard';

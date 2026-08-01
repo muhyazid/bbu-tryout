@@ -21,19 +21,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($id > 0) {
         if ($pass) {
-            $s = $conn->prepare("UPDATE peserta SET nama=?,nomor_peserta=?,jenis=?,angkatan=?,password=MD5(?) WHERE id=?");
-            $s->bind_param("sssssi", $nama,$nomor,$jenis,$angkatan,$pass,$id);
+            // Ada password baru → hash dulu
+            $hashed = password_hash($pass, PASSWORD_DEFAULT);
+            $s = $conn->prepare("UPDATE peserta SET nama=?,nomor_peserta=?,jenis=?,angkatan=?,password=? WHERE id=?");
+            $s->bind_param("sssssi", $nama,$nomor,$jenis,$angkatan,$hashed,$id);
         } else {
+            // Tidak ada password baru → jangan ubah password
             $s = $conn->prepare("UPDATE peserta SET nama=?,nomor_peserta=?,jenis=?,angkatan=? WHERE id=?");
             $s->bind_param("ssssi", $nama,$nomor,$jenis,$angkatan,$id);
         }
-        $s->execute();
-        $msg = 'Data peserta berhasil diperbarui.';
+        if ($s->execute()) {
+            $msg = 'Data peserta berhasil diperbarui.';
+        } else {
+            $error = 'Gagal memperbarui data peserta.';
+        }
     } else {
-        $s = $conn->prepare("INSERT INTO peserta (nama,nomor_peserta,jenis,angkatan,password) VALUES (?,?,?,?,MD5(?))");
-        $s->bind_param("sssss", $nama,$nomor,$jenis,$angkatan,$pass);
-        if ($s->execute()) $msg = 'Peserta berhasil ditambahkan.';
-        else $error = 'Nomor peserta sudah digunakan!';
+        // Tambah peserta baru → hash password
+        $hashed = password_hash($pass, PASSWORD_DEFAULT);
+        $s = $conn->prepare("INSERT INTO peserta (nama,nomor_peserta,jenis,angkatan,password) VALUES (?,?,?,?,?)");
+        $s->bind_param("sssss", $nama,$nomor,$jenis,$angkatan,$hashed);
+        if ($s->execute()) {
+            $msg = 'Peserta berhasil ditambahkan.';
+        } else {
+            $error = 'Gagal menambahkan peserta. Nomor peserta mungkin sudah digunakan.';
+        }
     }
 }
 

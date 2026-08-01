@@ -3,6 +3,7 @@ require_once dirname(__DIR__) . '/config.php';
 cekAdmin();
 
 $msg = '';
+$error = '';
 $materi_id = (int) ($_GET['materi'] ?? 0);
 $fj = $_GET['jenis'] ?? '';
 
@@ -10,7 +11,9 @@ $fj = $_GET['jenis'] ?? '';
 if (isset($_GET['hapus'])) {
     $sid = (int) $_GET['hapus'];
     $row = $conn->query("SELECT kategori_id FROM soal WHERE id=$sid")->fetch_assoc();
-    $conn->query("DELETE FROM soal WHERE id=$sid");
+    $del = $conn->prepare("DELETE FROM soal WHERE id=?");
+    $del->bind_param("i", $sid);
+    $del->execute();
     $msg = 'Soal berhasil dihapus.';
     if ($row) {
         $materi_id = (int) $row['kategori_id'];
@@ -19,7 +22,9 @@ if (isset($_GET['hapus'])) {
 
 if (isset($_GET['hapus_kat'])) {
     $kid = (int) $_GET['hapus_kat'];
-    $conn->query("DELETE FROM kategori WHERE id=$kid");
+    $del2 = $conn->prepare("DELETE FROM kategori WHERE id=?");
+    $del2->bind_param("i", $kid);
+    $del2->execute();
     $msg = 'Materi dihapus.';
     $materi_id = 0;
 }
@@ -50,13 +55,19 @@ if (isset($_POST['simpan_soal'])) {
     if ($id > 0) {
         $s = $conn->prepare('UPDATE soal SET kategori_id=?,pertanyaan=?,pilihan_a=?,pilihan_b=?,pilihan_c=?,pilihan_d=?,jawaban_benar=? WHERE id=?');
         $s->bind_param('issssssi', $kid, $p, $a, $b, $c, $d, $jwb, $id);
-        $s->execute();
-        $msg = 'Soal berhasil diperbarui.';
+        if ($s->execute()) {
+            $msg = 'Soal berhasil diperbarui.';
+        } else {
+            $error = 'Gagal memperbarui soal.';
+        }
     } else {
         $s = $conn->prepare('INSERT INTO soal (kategori_id,pertanyaan,pilihan_a,pilihan_b,pilihan_c,pilihan_d,jawaban_benar) VALUES (?,?,?,?,?,?,?)');
         $s->bind_param('issssss', $kid, $p, $a, $b, $c, $d, $jwb);
-        $s->execute();
-        $msg = 'Soal berhasil ditambahkan.';
+        if ($s->execute()) {
+            $msg = 'Soal berhasil ditambahkan.';
+        } else {
+            $error = 'Gagal menyimpan soal. Silakan coba lagi.';
+        }
     }
     $materi_id = $kid;
 }
@@ -169,6 +180,10 @@ include __DIR__ . '/partials/layout-start.php';
 
     <?php if ($msg): ?>
     <div class="alert alert-success"><?= e($msg) ?></div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+    <div class="alert alert-error"><?= e($error) ?></div>
     <?php endif; ?>
 
     <?php if (!$materi_aktif): ?>

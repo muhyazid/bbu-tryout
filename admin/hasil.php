@@ -4,13 +4,13 @@ cekAdmin();
 
 // Filter
 $fj  = $_GET['jenis']   ?? '';
-$fs  = $_GET['sesi_id'] ?? '';
+$fs  = (int)($_GET['sesi_id'] ?? 0);
 $fna = trim($_GET['nama'] ?? '');
 
 $where = "WHERE 1=1";
-if ($fj)  $where .= " AND s.jenis='$fj'";
-if ($fs)  $where .= " AND h.sesi_id=".(int)$fs;
-if ($fna) $where .= " AND p.nama LIKE '%".addslashes($fna)."%'";
+if ($fj)  $where .= " AND s.jenis='"   . $conn->real_escape_string($fj)  . "'";
+if ($fs)  $where .= " AND h.sesi_id="  . $fs;
+if ($fna) $where .= " AND p.nama LIKE '%" . $conn->real_escape_string($fna) . "%'";
 
 $hasil = $conn->query("
     SELECT h.*, p.nama, p.nomor_peserta, p.jenis as p_jenis,

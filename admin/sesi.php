@@ -3,13 +3,16 @@ require_once '../config.php';
 cekAdmin();
 
 $msg = '';
+$error = '';
 
 // Toggle aktif/nonaktif
 if (isset($_GET['toggle'])) {
     $id  = (int)$_GET['toggle'];
     $cur = $conn->query("SELECT status FROM sesi_ujian WHERE id=$id")->fetch_assoc()['status'];
     $new = $cur === 'aktif' ? 'nonaktif' : 'aktif';
-    $conn->query("UPDATE sesi_ujian SET status='$new' WHERE id=$id");
+    $upd = $conn->prepare("UPDATE sesi_ujian SET status=? WHERE id=?");
+    $upd->bind_param("si", $new, $id);
+    $upd->execute();
     $msg = $new === 'aktif' ? 'Sesi berhasil diaktifkan.' : 'Sesi dinonaktifkan.';
 }
 
@@ -40,13 +43,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id > 0) {
         $s = $conn->prepare("UPDATE sesi_ujian SET nama_sesi=?,jenis=?,tanggal=?,jam_mulai=?,jam_selesai=?,durasi_menit=?,jumlah_soal=?,mode=? WHERE id=?");
         $s->bind_param("sssssiisi", $nama,$jenis,$tgl,$jam1,$jam2,$dur,$jml,$mode,$id);
-        $s->execute();
-        $msg = 'Sesi berhasil diperbarui.';
+        if ($s->execute()) {
+            $msg = 'Sesi berhasil diperbarui.';
+        } else {
+            $error = 'Gagal memperbarui sesi.';
+        }
     } else {
         $s = $conn->prepare("INSERT INTO sesi_ujian (nama_sesi,jenis,tanggal,jam_mulai,jam_selesai,durasi_menit,jumlah_soal,mode) VALUES (?,?,?,?,?,?,?,?)");
         $s->bind_param("sssssiis", $nama,$jenis,$tgl,$jam1,$jam2,$dur,$jml,$mode);
-        $s->execute();
-        $msg = 'Sesi ujian berhasil dibuat.';
+        if ($s->execute()) {
+            $msg = 'Sesi ujian berhasil dibuat.';
+        } else {
+            $error = 'Gagal membuat sesi ujian.';
+        }
     }
     $edit = null;
 }
@@ -64,6 +73,10 @@ include __DIR__ . '/partials/layout-start.php';
 
     <?php if ($msg): ?>
     <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+    <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <!-- FORM -->

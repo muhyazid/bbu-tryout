@@ -244,11 +244,6 @@ $timer_awal  = sprintf('%02d:00', (int)$sesi['durasi_menit']);
     </div>
   </header>
 
-  <!-- Progress bar -->
-  <div class="exam-progress-track" aria-hidden="true">
-    <div id="progress-bar" class="exam-progress-fill"></div>
-  </div>
-
   <!-- Form ujian -->
   <form method="POST" id="exam-form">
     <input type="hidden" name="submit_ujian" value="1">
@@ -433,6 +428,7 @@ $timer_awal  = sprintf('%02d:00', (int)$sesi['durasi_menit']);
 const SESI_ID      = <?= $sesi_id ?>;
 const DURASI_DETIK = <?= $sesi['durasi_menit'] * 60 ?>;
 const MODE         = '<?= e($sesi['mode']) ?>';
+const TOTAL_SOAL   = <?= count($soal_arr) ?>;
 // ── ONE QUESTION PER SCREEN ────────────────────────────────
 let currentNo = 1; // soal yang sedang ditampilkan (1-based)
 
@@ -478,7 +474,11 @@ function tampilSoal(no) {
 }
 
 function nextSoal() {
-    if (currentNo < TOTAL_SOAL) tampilSoal(currentNo + 1);
+    if (currentNo < TOTAL_SOAL) {
+        tampilSoal(currentNo + 1);
+    } else {
+        konfirmasiSubmit();
+    }
 }
 
 function prevSoal() {
@@ -574,18 +574,9 @@ function pilihJawaban(soalId, opt) {
     }
 }
 
+
 function updateProgress() {
     document.getElementById('answered-count').textContent = answered;
-    const pct = TOTAL_SOAL > 0 ? (answered / TOTAL_SOAL * 100) : 0;
-    document.getElementById('progress-bar').style.width = pct + '%';
-}
-
-// Scroll ke soal
-function scrollToSoal(no) {
-    const allCards = document.querySelectorAll('.soal-card');
-    if (allCards[no - 1]) {
-        allCards[no - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
 }
 
 // ── SUBMIT ─────────────────────────────────────────────────

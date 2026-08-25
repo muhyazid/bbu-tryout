@@ -4,10 +4,24 @@ cekAdmin();
 
 $msg = ''; $error = '';
 
+// Ambil pesan flash dari redirect sebelumnya (kalau ada)
+if (isset($_SESSION['flash_msg'])) {
+    $msg = $_SESSION['flash_msg'];
+    unset($_SESSION['flash_msg']);
+}
+
 // HAPUS
 if (isset($_GET['hapus'])) {
-    $conn->query("DELETE FROM peserta WHERE id=".(int)$_GET['hapus']);
-    $msg = 'Peserta berhasil dihapus.';
+    $hid = (int)$_GET['hapus'];
+    $del = $conn->prepare("DELETE FROM peserta WHERE id=?");
+    $del->bind_param("i", $hid);
+
+    if ($del->execute()) {
+        $_SESSION['flash_msg'] = 'Peserta berhasil dihapus.';
+    } else {
+        $_SESSION['flash_msg'] = 'Peserta ini tidak bisa dihapus karena masih memiliki riwayat nilai ujian.';
+    }
+    redirect('/admin/peserta.php');
 }
 
 // SIMPAN (tambah / edit)
@@ -31,9 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $s->bind_param("ssssi", $nama,$nomor,$jenis,$angkatan,$id);
         }
         if ($s->execute()) {
-            $msg = 'Data peserta berhasil diperbarui.';
+            $_SESSION['flash_msg'] = 'Data peserta berhasil diperbarui.';
         } else {
-            $error = 'Gagal memperbarui data peserta.';
+            $_SESSION['flash_msg'] = 'Gagal memperbarui data peserta.';
         }
     } else {
         // Tambah peserta baru → hash password
@@ -41,11 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $s = $conn->prepare("INSERT INTO peserta (nama,nomor_peserta,jenis,angkatan,password) VALUES (?,?,?,?,?)");
         $s->bind_param("sssss", $nama,$nomor,$jenis,$angkatan,$hashed);
         if ($s->execute()) {
-            $msg = 'Peserta berhasil ditambahkan.';
+            $_SESSION['flash_msg'] = 'Peserta berhasil ditambahkan.';
         } else {
-            $error = 'Gagal menambahkan peserta. Nomor peserta mungkin sudah digunakan.';
+            $_SESSION['flash_msg'] = 'Gagal menambahkan peserta. Nomor peserta mungkin sudah digunakan.';
         }
     }
+    redirect('/admin/peserta.php');
 }
 
 // Edit mode
@@ -212,11 +227,7 @@ include __DIR__ . '/partials/layout-start.php';
     function tutupModal() {
       const modal = document.getElementById('modal-peserta');
       modal.classList.remove('aktif');
-
-      modal.addEventListener('transitionend', function handler() {
-        modal.style.display = 'none';
-        modal.removeEventListener('transitionend', handler);
-      });
+      modal.style.display = 'none';
       document.body.style.overflow = '';
       editId = null;
     }
@@ -271,7 +282,7 @@ include __DIR__ . '/partials/layout-start.php';
     <div class="card">
       <div class="card-header">
         <h3>Daftar peserta</h3>
-        <button onclick="bukaModal()" class="btn-admin-primary" style="font-size:13px;padding:8px 14px;">
+        <button onclick="bukaModal()" class="btn-admin-primary btn-sm">
           <?= admin_icon('plus') ?> Tambah peserta
         </button>
       </div>

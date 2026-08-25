@@ -50,92 +50,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         body {
             min-height: 100vh;
-            background: #f0f2f5;
+            background: #F1F5F9;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            padding: 20px;
         }
 
         .card {
             background: white;
-            border-radius: 12px;
-            padding: 40px 36px;
+            border-radius: 14px;
+            padding: 36px 36px 32px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 24px rgba(15,30,60,0.08);
+            border: 1px solid #E2E8F0;
         }
 
         .logo {
             text-align: center;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
+        }
+
+        .logo img {
+            width: 128px;
+            height: auto;
+            margin: 0 auto 16px;
+            display: block;
         }
 
         .logo h1 {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
-            color: #1a3c6e;
+            color: #0F1E3C;
+            letter-spacing: -0.2px;
         }
 
         .logo p {
-            font-size: 13px;
-            color: #888;
+            font-size: 12.5px;
+            color: #64748B;
             margin-top: 4px;
         }
 
         .badge {
             display: inline-block;
-            background: #e8f0fe;
-            color: #1a3c6e;
+            background: #EFF6FF;
+            color: #1D4ED8;
             font-size: 11px;
             font-weight: 600;
             padding: 3px 10px;
             border-radius: 20px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             letter-spacing: 0.5px;
         }
 
         label {
             display: block;
-            font-size: 13px;
-            font-weight: 500;
-            color: #444;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #334155;
             margin-bottom: 6px;
         }
 
         input {
             width: 100%;
             padding: 10px 14px;
-            border: 1.5px solid #ddd;
+            border: 1.5px solid #E2E8F0;
             border-radius: 8px;
             font-size: 14px;
-            color: #333;
+            color: #0F172A;
             margin-bottom: 16px;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, box-shadow 0.2s;
             outline: none;
         }
 
-        input:focus { border-color: #1a3c6e; }
+        input:focus {
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+        }
 
         button {
             width: 100%;
             padding: 11px;
-            background: #1a3c6e;
+            background: #0F1E3C;
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 15px;
+            font-size: 14.5px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
         }
 
-        button:hover { background: #15305a; }
+        button:hover { background: #162846; }
 
         .error {
-            background: #fff0f0;
-            color: #c0392b;
-            border: 1px solid #f5c6c6;
+            background: #FEF2F2;
+            color: #DC2626;
+            border: 1px solid #FECACA;
             border-radius: 8px;
             padding: 10px 14px;
             font-size: 13px;
@@ -144,9 +157,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .footer {
             text-align: center;
-            margin-top: 24px;
-            font-size: 12px;
-            color: #aaa;
+            margin-top: 22px;
+            font-size: 11.5px;
+            color: #94A3B8;
         }
     </style>
 </head>
@@ -154,13 +167,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="card">
     <div class="logo">
-        <span class="badge">SOU & GMDSS</span>
+        <img src="<?= url('/assets/img/logo-bbu.jpeg') ?>" alt="Logo Bharuna Bhakti Utama">
         <h1>BBU Tryout</h1>
-        <p>Bharuna Bhakti Utama — Sistem Ujian Lokal</p>
     </div>
 
     <?php if ($error): ?>
-        <div class="error"><?= htmlspecialchars($error) ?></div>
+        <div class="error"><?= e($error) ?></div>
     <?php endif; ?>
 
     <form method="POST">
@@ -172,8 +184,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <button type="submit">Masuk</button>
     </form>
-
-    <div class="footer">Admin login menggunakan username · Peserta menggunakan nomor peserta</div>
 </div>
 
 </body>

@@ -11,13 +11,13 @@ $nav = [
 ];
 ?>
 <aside class="sidebar">
-    <div class="sidebar-logo">
-        <span class="sidebar-mark">BBU</span>
-        <div>
-            <strong class="sidebar-title">BBU Tryout</strong>
-            <span class="sidebar-sub">Panel Admin</span>
+        <div class="sidebar-logo">
+            <img src="<?= url('/assets/img/logo-bbu1.png') ?>" alt="Logo Bharuna Bhakti Utama" class="sidebar-mark">
+            <div>
+                <strong class="sidebar-title">BBU Tryout</strong>
+                <span class="sidebar-sub">Panel Admin</span>
+            </div>
         </div>
-    </div>
     <nav>
         <?php foreach ($nav as $key => $item): ?>
         <a href="<?= htmlspecialchars($item['href']) ?>"

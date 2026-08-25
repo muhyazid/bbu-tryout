@@ -4,20 +4,26 @@ cekAdmin();
 
 $msg = '';
 $error = '';
+// Ambil pesan flash dari redirect sebelumnya (kalau ada)
+if (isset($_SESSION['flash_msg'])) {
+    $msg = $_SESSION['flash_msg'];
+    unset($_SESSION['flash_msg']);
+}
 $materi_id = (int) ($_GET['materi'] ?? 0);
 $fj = $_GET['jenis'] ?? '';
+$cari_materi = trim($_GET['cari'] ?? '');
+$cari_soal = trim($_GET['cari_soal'] ?? '');
 
-// ——— Aksi hapus ———
 if (isset($_GET['hapus'])) {
     $sid = (int) $_GET['hapus'];
     $row = $conn->query("SELECT kategori_id FROM soal WHERE id=$sid")->fetch_assoc();
     $del = $conn->prepare("DELETE FROM soal WHERE id=?");
     $del->bind_param("i", $sid);
     $del->execute();
-    $msg = 'Soal berhasil dihapus.';
-    if ($row) {
-        $materi_id = (int) $row['kategori_id'];
-    }
+
+    $tujuan_materi = $row ? (int) $row['kategori_id'] : 0;
+    $_SESSION['flash_msg'] = 'Soal berhasil dihapus.';
+    redirect('/admin/soal.php' . ($tujuan_materi ? '?materi=' . $tujuan_materi : ''));
 }
 
 if (isset($_GET['hapus_kat'])) {
@@ -25,8 +31,9 @@ if (isset($_GET['hapus_kat'])) {
     $del2 = $conn->prepare("DELETE FROM kategori WHERE id=?");
     $del2->bind_param("i", $kid);
     $del2->execute();
-    $msg = 'Materi dihapus.';
-    $materi_id = 0;
+
+    $_SESSION['flash_msg'] = 'Materi dihapus.';
+    redirect('/admin/soal.php');
 }
 
 // ——— Tambah materi ———
@@ -82,14 +89,18 @@ if (isset($_GET['edit'])) {
 
 $show_form = (($_GET['action'] ?? '') === 'tambah' || $edit);
 
-// Daftar materi + jumlah soal
+// Daftar materi + jumlah soal (dengan filter jenis & pencarian nama)
 $sql_materi = "
     SELECT k.*, COUNT(s.id) AS jumlah_soal
     FROM kategori k
     LEFT JOIN soal s ON s.kategori_id = k.id
+    WHERE 1=1
 ";
 if ($fj !== '') {
-    $sql_materi .= " WHERE k.jenis = '" . $conn->real_escape_string($fj) . "'";
+    $sql_materi .= " AND k.jenis = '" . $conn->real_escape_string($fj) . "'";
+}
+if ($cari_materi !== '') {
+    $sql_materi .= " AND k.nama LIKE '%" . $conn->real_escape_string($cari_materi) . "%'";
 }
 $sql_materi .= ' GROUP BY k.id ORDER BY k.jenis, k.nama';
 
@@ -101,24 +112,25 @@ while ($row = $res_materi->fetch_assoc()) {
 
 $materi_aktif = null;
 if ($materi_id > 0) {
-    foreach ($materi_list as $m) {
-        if ((int) $m['id'] === $materi_id) {
-            $materi_aktif = $m;
-            break;
-        }
-    }
-    if (!$materi_aktif) {
-        $st = $conn->prepare('SELECT k.*, (SELECT COUNT(*) FROM soal WHERE kategori_id=k.id) AS jumlah_soal FROM kategori k WHERE k.id=?');
-        $st->bind_param('i', $materi_id);
-        $st->execute();
-        $materi_aktif = $st->get_result()->fetch_assoc();
-    }
+    $st = $conn->prepare('SELECT k.*, (SELECT COUNT(*) FROM soal WHERE kategori_id=k.id) AS jumlah_soal FROM kategori k WHERE k.id=?');
+    $st->bind_param('i', $materi_id);
+    $st->execute();
+    $materi_aktif = $st->get_result()->fetch_assoc();
 }
 
+// Daftar soal dalam materi aktif (dengan pencarian pertanyaan)
 $soal_res = null;
 if ($materi_aktif) {
-    $st = $conn->prepare('SELECT * FROM soal WHERE kategori_id=? ORDER BY id DESC');
-    $st->bind_param('i', $materi_id);
+    $sql_soal = 'SELECT * FROM soal WHERE kategori_id=?';
+    if ($cari_soal !== '') {
+        $sql_soal .= ' AND pertanyaan LIKE ?';
+        $st = $conn->prepare($sql_soal . ' ORDER BY id DESC');
+        $like = '%' . $cari_soal . '%';
+        $st->bind_param('is', $materi_id, $like);
+    } else {
+        $st = $conn->prepare($sql_soal . ' ORDER BY id DESC');
+        $st->bind_param('i', $materi_id);
+    }
     $st->execute();
     $soal_res = $st->get_result();
 }
@@ -127,13 +139,13 @@ $admin_page = 'soal';
 $page_title = $materi_aktif
     ? ($materi_aktif['nama'] . ' — Bank Soal')
     : 'Bank Soal — BBU Tryout';
-  
-    $topbar_breadcrumb = $materi_aktif
-        ? 'Bank Soal / ' . e($materi_aktif['nama'])
-        : 'Bank Soal';
-    $topbar_title = $materi_aktif
-        ? e($materi_aktif['nama'])
-        : 'Bank Soal';
+
+$topbar_breadcrumb = $materi_aktif
+    ? 'Bank Soal / ' . e($materi_aktif['nama'])
+    : 'Bank Soal';
+$topbar_title = $materi_aktif
+    ? e($materi_aktif['nama'])
+    : 'Bank Soal';
 
 include __DIR__ . '/partials/layout-start.php';
 ?>
@@ -145,12 +157,6 @@ include __DIR__ . '/partials/layout-start.php';
     </nav>
 
     <?php else: ?>
-
-    <div class="filter-group" style="margin-bottom:20px;">
-      <a href="soal.php" class="filter-btn <?= !$fj ? 'filter-btn-active' : '' ?>">Semua</a>
-      <a href="soal.php?jenis=SOU" class="filter-btn <?= $fj==='SOU' ? 'filter-btn-active' : '' ?>">SOU</a>
-      <a href="soal.php?jenis=GMDSS" class="filter-btn <?= $fj==='GMDSS' ? 'filter-btn-active' : '' ?>">GMDSS</a>
-    </div>
 
     <section class="add-materi-box">
       <h4>Tambah materi ujian baru</h4>
@@ -187,39 +193,61 @@ include __DIR__ . '/partials/layout-start.php';
     <?php endif; ?>
 
     <?php if (!$materi_aktif): ?>
-    <!-- DAFTAR MATERI -->
-    <?php if (count($materi_list) > 0): ?>
-    <div class="materi-grid">
-      <?php foreach ($materi_list as $m): ?>
-        <article class="materi-card">
-          <button class="materi-card-hapus"
-            onclick="if(confirm('Hapus materi ini beserta semua soalnya?')) window.location='soal.php?hapus_kat=<?= (int) $m['id'] ?>'"
-            title="Hapus materi">
-            <i class="fas fa-trash"></i>
-          </button>
-          <div style="margin-bottom:10px;">
-            <span class="badge badge-<?= strtolower($m['jenis']) ?>"><?= e($m['jenis']) ?></span>
-          </div>
-          <h4><?= e($m['nama']) ?></h4>
-          <div class="materi-count">
-            <?= (int) $m['jumlah_soal'] ?><span> soal</span>
-          </div>
-          <div class="materi-actions">
-            <a href="soal.php?materi=<?= (int) $m['id'] ?>" class="btn-materi-primary">Kelola soal</a>
-            <a href="soal.php?materi=<?= (int) $m['id'] ?>&action=tambah" class="btn-materi-secondary">+ Soal</a>
-          </div>
-        </article>
-      <?php endforeach; ?>
+    <!-- ═══════════════ LIST MATERI ═══════════════ -->
+
+    <div class="soal-filter-row">
+      <div class="filter-group">
+        <a href="soal.php" class="filter-btn <?= !$fj ? 'filter-btn-active' : '' ?>">Semua</a>
+        <a href="soal.php?jenis=SOU" class="filter-btn <?= $fj==='SOU' ? 'filter-btn-active' : '' ?>">SOU</a>
+        <a href="soal.php?jenis=GMDSS" class="filter-btn <?= $fj==='GMDSS' ? 'filter-btn-active' : '' ?>">GMDSS</a>
+      </div>
+      <form method="GET" class="soal-search-box">
+        <?php if ($fj): ?><input type="hidden" name="jenis" value="<?= e($fj) ?>"><?php endif; ?>
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <input type="text" name="cari" placeholder="Cari materi..." value="<?= e($cari_materi) ?>">
+      </form>
     </div>
-    <?php else: ?>
-    <div class="empty-state">
-      <p><strong>Belum ada materi ujian</strong></p>
-      <p>Isi formulir di atas untuk menambah materi pertama (misalnya Navigasi, Konstruksi, dll.).</p>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Daftar materi</h3>
+      </div>
+
+      <?php if (count($materi_list) > 0): ?>
+      <div class="materi-list">
+        <?php foreach ($materi_list as $m): ?>
+        <div class="materi-row">
+          <span class="badge badge-<?= strtolower($m['jenis']) ?> materi-row-badge"><?= e($m['jenis']) ?></span>
+          <a href="soal.php?materi=<?= (int) $m['id'] ?>" class="materi-row-name"><?= e($m['nama']) ?></a>
+          <span class="materi-row-count"><?= (int) $m['jumlah_soal'] ?> soal</span>
+          <div class="materi-row-actions">
+            <a href="soal.php?materi=<?= (int) $m['id'] ?>"
+               class="btn-icon" data-tooltip="Kelola soal">
+              <i class="fas fa-list"></i>
+            </a>
+            <a href="soal.php?materi=<?= (int) $m['id'] ?>&action=tambah"
+               class="btn-icon" data-tooltip="Tambah soal">
+              <i class="fas fa-plus"></i>
+            </a>
+            <a href="#"
+               class="btn-icon btn-icon-delete" data-tooltip="Hapus materi"
+               onclick="if(confirm('Hapus materi ini beserta semua soalnya?')) window.location='soal.php?hapus_kat=<?= (int) $m['id'] ?>'; return false;">
+              <i class="fas fa-trash"></i>
+            </a>
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <?php else: ?>
+      <div class="empty-state">
+        <p><strong><?= $cari_materi ? 'Materi tidak ditemukan' : 'Belum ada materi ujian' ?></strong></p>
+        <p><?= $cari_materi ? 'Coba kata kunci lain.' : 'Gunakan formulir di atas untuk menambah materi pertama.' ?></p>
+      </div>
+      <?php endif; ?>
     </div>
-    <?php endif; ?>
 
     <?php else: ?>
-    <!-- DETAIL SATU MATERI -->
+    <!-- ═══════════════ DETAIL SATU MATERI ═══════════════ -->
     <?php if ($show_form): ?>
     <div class="card" id="form-soal" style="margin-bottom:20px;">
       <div class="card-header">
@@ -282,10 +310,18 @@ include __DIR__ . '/partials/layout-start.php';
             <?= e($materi_aktif['nama']) ?> · <?= (int)$materi_aktif['jumlah_soal'] ?> soal
           </span>
         </div>
-        <a href="soal.php?materi=<?= $materi_id ?>&action=tambah#form-soal" 
+        <a href="soal.php?materi=<?= $materi_id ?>&action=tambah#form-soal"
           class="btn-admin-primary" style="font-size:13px;padding:8px 14px;">
           <?= admin_icon('plus') ?> Tambah soal
         </a>
+      </div>
+
+      <div class="soal-search-inline">
+        <form method="GET">
+          <input type="hidden" name="materi" value="<?= $materi_id ?>">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <input type="text" name="cari_soal" placeholder="Cari pertanyaan di materi ini..." value="<?= e($cari_soal) ?>">
+        </form>
       </div>
 
       <?php if ($soal_res && $soal_res->num_rows > 0): ?>
@@ -311,16 +347,15 @@ include __DIR__ . '/partials/layout-start.php';
                 <?= e($s['jawaban_benar']) ?>
               </span>
             </td>
-            
             <td>
               <div class="action-buttons">
-                <a href="soal.php?edit=<?= $s['id'] ?>#form-soal" 
-                  class="btn-icon btn-icon-edit" 
+                <a href="soal.php?edit=<?= $s['id'] ?>#form-soal"
+                  class="btn-icon btn-icon-edit"
                   data-tooltip="Edit soal">
                   <i class="fas fa-pen"></i>
                 </a>
-                <a href="soal.php?hapus=<?= $s['id'] ?>" 
-                  class="btn-icon btn-icon-delete" 
+                <a href="soal.php?hapus=<?= $s['id'] ?>"
+                  class="btn-icon btn-icon-delete"
                   data-tooltip="Hapus soal"
                   onclick="return confirm('Hapus soal <?= htmlspecialchars(addslashes($s['pertanyaan'])) ?>?')">
                   <i class="fas fa-trash-alt"></i>
@@ -334,8 +369,14 @@ include __DIR__ . '/partials/layout-start.php';
       </div>
       <?php else: ?>
       <div class="empty-state">
-        <p><strong>Belum ada soal di materi ini</strong></p>
-        <p><a href="soal.php?materi=<?= $materi_id ?>&action=tambah" class="btn-link">Tambah soal pertama</a></p>
+        <p><strong><?= $cari_soal ? 'Soal tidak ditemukan' : 'Belum ada soal di materi ini' ?></strong></p>
+        <p>
+          <?php if ($cari_soal): ?>
+            Coba kata kunci lain.
+          <?php else: ?>
+            <a href="soal.php?materi=<?= $materi_id ?>&action=tambah" class="btn-link">Tambah soal pertama</a>
+          <?php endif; ?>
+        </p>
       </div>
       <?php endif; ?>
     </div>

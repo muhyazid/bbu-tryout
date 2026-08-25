@@ -1,6 +1,9 @@
 /* ============================================================
    BBU Tryout — peserta.css
    Halaman ujian: satu soal per layar + grid navigasi
+   Class name di file ini disesuaikan PERSIS dengan HTML
+   di peserta/ujian.php — jangan ganti nama class tanpa
+   mengubah keduanya bersamaan.
    ============================================================ */
 
 /* ─── BASE ───────────────────────────────────────────────── */
@@ -8,7 +11,6 @@
 
 html, body {
   height: 100%;
-  overflow: hidden;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   color: #0F172A;
@@ -16,8 +18,13 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ─── SHELL: topbar + body ───────────────────────────────── */
-.exam-shell {
+body.exam-page   { overflow: hidden; }
+body.peserta-page{ overflow-y: auto; }
+
+/* ─── WRAPPER UTAMA HALAMAN UJIAN ───────────────────────────
+   Ini container flex vertikal: topbar → progress → content → footer
+   ────────────────────────────────────────────────────────── */
+.exam-body-wrap {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -36,28 +43,28 @@ html, body {
   gap: 16px;
 }
 
-.exam-brand {
+.exam-title {
   display: flex;
   align-items: baseline;
   gap: 8px;
   min-width: 0;
-}
-.exam-brand-name {
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
 }
-.exam-brand-session {
+
+.exam-subtitle {
   color: rgba(255,255,255,0.42);
   font-size: 12px;
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 240px;
+  max-width: 260px;
 }
 
-.exam-timer-box {
+.exam-timer-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -66,7 +73,7 @@ html, body {
   border-radius: 8px;
   flex-shrink: 0;
 }
-.exam-timer-lbl {
+.exam-timer-label {
   color: rgba(255,255,255,0.45);
   font-size: 11px;
   white-space: nowrap;
@@ -81,66 +88,61 @@ html, body {
 .exam-timer.warn   { color: #FCD34D; }
 .exam-timer.danger { color: #FCA5A5; }
 
-.exam-user-info {
+.exam-user {
   text-align: right;
   flex-shrink: 0;
 }
-.exam-user-name {
+.exam-user > span:first-child {
+  display: block;
   color: #fff;
   font-size: 13px;
   font-weight: 500;
-  display: block;
 }
-.exam-user-sub {
+.exam-user > span:last-child {
+  display: block;
   color: rgba(255,255,255,0.42);
   font-size: 11px;
-  display: block;
   margin-top: 1px;
 }
 
-/* ─── PROGRESS BAR ───────────────────────────────────────── */
-.exam-progress-track {
-  height: 3px;
-  background: rgba(15,30,60,0.12);
-  flex-shrink: 0;
-}
-.exam-progress-fill {
-  height: 100%;
-  background: #2563EB;
-  transition: width 0.35s ease;
-}
 
-/* ─── BODY: main soal + sidebar grid ────────────────────── */
-.exam-body {
+
+/* ─── CONTENT AREA: main soal + sidebar grid ─────────────────
+   Flex horizontal — inilah yang membuat sidebar berada
+   DI SAMPING (bukan di bawah) area soal.
+   ────────────────────────────────────────────────────────── */
+.exam-content-area {
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-height: 0; /* penting agar flex child bisa scroll, bukan overflow ke luar */
 }
 
-/* ─── MAIN: area soal tunggal ───────────────────────────── */
+/* ─── MAIN: area soal ────────────────────────────────────── */
 .exam-main {
   flex: 1;
+  min-width: 0;
+  padding: 16px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  padding: 20px 20px 0 20px;
-  gap: 14px;
+  gap: 12px;
 }
 
 /* Penanda mapel */
 .mapel-indicator {
-  display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
 }
-.mapel-indicator-lbl {
-  font-size: 10px;
-  font-weight: 700;
+.mapel-indicator-label {
+  font-size: 11px;
+  font-weight: 600;
   color: #94A3B8;
   text-transform: uppercase;
-  letter-spacing: 0.7px;
+  letter-spacing: 0.6px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .mapel-indicator-name {
   font-size: 13px;
@@ -154,54 +156,63 @@ html, body {
   background: #E2E8F0;
 }
 
+/* ── MODE SATU SOAL PER LAYAR ─────────────────────────────
+   Default: sembunyikan semua soal & penanda mapel.
+   JS (tampilSoal() di ujian.php) menambah class .aktif
+   pada soal yang sedang ditampilkan.
+   ────────────────────────────────────────────────────────── */
+.soal-card       { display: none; }
+.mapel-indicator { display: none; }
+
+.soal-card.aktif       { display: flex; }
+.mapel-indicator.aktif { display: flex; }
+
 /* Soal card */
 .soal-card {
   background: #fff;
   border: 1px solid #E2E8F0;
   border-radius: 10px;
   padding: 22px 24px;
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
   flex-direction: column;
   gap: 18px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  flex-shrink: 0;
 }
 
 .soal-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-shrink: 0;
+  gap: 12px;
 }
-.soal-num-label {
+.soal-num {
   font-size: 12px;
   font-weight: 600;
   color: #94A3B8;
 }
+.soal-num strong { color: #0F172A; }
 .soal-mapel-tag {
   font-size: 11px;
   color: #94A3B8;
-  background: #F8FAFC;
+  background: #F1F5F9;
   padding: 3px 9px;
-  border-radius: 5px;
+  border-radius: 4px;
   border: 1px solid #E2E8F0;
+  white-space: nowrap;
 }
 
 .soal-text {
-  font-size: 15px;
+  font-size: 14.5px;
   line-height: 1.75;
   color: #0F172A;
   font-weight: 500;
-  flex-shrink: 0;
 }
 
-/* Pilihan jawaban — 2 kolom */
+/* Pilihan jawaban */
 .jwb-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .jwb-option {
@@ -216,9 +227,8 @@ html, body {
   text-align: left;
   width: 100%;
   transition: border-color 0.12s, background 0.12s;
-  font-size: 13px;
+  font-size: 13.5px;
   color: #0F172A;
-  line-height: 1.4;
 }
 .jwb-option:hover {
   border-color: #93C5FD;
@@ -228,15 +238,16 @@ html, body {
   border-color: #2563EB;
   background: #EFF6FF;
 }
+
 .jwb-letter {
-  width: 28px;
-  height: 28px;
+  width: 27px;
+  height: 27px;
   border-radius: 6px;
   background: #F1F5F9;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #64748B;
   flex-shrink: 0;
@@ -247,79 +258,22 @@ html, body {
   color: #fff;
 }
 
-/* ─── FOOTER: prev/next + submit ────────────────────────── */
-.exam-footer {
-  height: 58px;
+/* Empty state — bank soal kosong */
+.exam-empty {
   background: #fff;
-  border-top: 1px solid #E2E8F0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  flex-shrink: 0;
-  gap: 12px;
-}
-
-.exam-footer-info {
-  font-size: 12px;
-  color: #64748B;
-  white-space: nowrap;
-}
-.exam-footer-info strong { color: #0F172A; font-weight: 600; }
-
-.exam-nav-btns {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 7px;
   border: 1px solid #E2E8F0;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 500;
+  border-radius: 10px;
+  padding: 44px 24px;
+  text-align: center;
   color: #64748B;
-  cursor: pointer;
-  transition: all 0.12s;
-  white-space: nowrap;
 }
-.btn-nav:hover:not(:disabled) {
-  border-color: #93C5FD;
-  color: #2563EB;
-}
-.btn-nav:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-.btn-nav.next {
-  background: #0F1E3C;
-  color: #fff;
-  border-color: #0F1E3C;
-}
-.btn-nav.next:hover:not(:disabled) {
-  background: #162846;
-  border-color: #162846;
-}
+.exam-empty p { font-size: 13px; margin-bottom: 6px; }
+.exam-empty strong { font-size: 15px; color: #0F172A; }
 
-.btn-submit-exam {
-  background: #2563EB;
-  color: #fff;
-  border: none;
-  border-radius: 7px;
-  padding: 9px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-.btn-submit-exam:hover { background: #1D4ED8; }
-
-/* ─── SIDEBAR: grid soal ────────────────────────────────── */
+/* ─── SIDEBAR: grid soal per mapel ────────────────────────
+   width tetap + flex-shrink:0 => tidak akan "jatuh" ke bawah
+   selama parent (.exam-content-area) adalah flex row.
+   ────────────────────────────────────────────────────────── */
 .exam-sidebar {
   width: 196px;
   background: #fff;
@@ -327,12 +281,11 @@ html, body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-.exam-sidebar-scroll {
-  flex: 1;
-  overflow-y: auto;
+.exam-sidebar-inner {
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -352,6 +305,7 @@ html, body {
   align-items: center;
   gap: 6px;
   overflow: hidden;
+  white-space: nowrap;
 }
 .grid-mapel-label::after {
   content: '';
@@ -388,13 +342,12 @@ html, body {
 .soal-num-btn.unanswered{ background: #F1F5F9; color: #94A3B8; }
 
 /* Legend */
-.sidebar-legend {
-  padding: 10px 14px 14px;
+.grid-legend {
+  padding-top: 12px;
   border-top: 1px solid #E2E8F0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  flex-shrink: 0;
+  gap: 6px;
 }
 .legend-row {
   display: flex;
@@ -409,9 +362,52 @@ html, body {
   border-radius: 3px;
   flex-shrink: 0;
 }
-.legend-dot.cur      { background: #2563EB; }
-.legend-dot.answered { background: #DCFCE7; border: 1px solid #86EFAC; }
-.legend-dot.empty    { background: #F1F5F9; border: 1px solid #E2E8F0; }
+.legend-dot.current   { background: #2563EB; }
+.legend-dot.answered  { background: #DCFCE7; border: 1px solid #86EFAC; }
+.legend-dot.unanswered{ background: #F1F5F9; border: 1px solid #E2E8F0; }
+
+/* ─── FOOTER: prev / progress / next ─────────────────────── */
+.exam-footer {
+  height: 58px;
+  background: #fff;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.exam-footer-progress {
+  font-size: 12.5px;
+  color: #64748B;
+  white-space: nowrap;
+  text-align: center;
+}
+.exam-footer-progress strong { color: #0F172A; font-weight: 600; }
+
+/* Tombol prev/next & submit — pakai class umum btn-primary/btn-secondary
+   yang sudah didefinisikan di style.css, tambahan kecil di sini saja */
+.exam-footer .btn-primary,
+.exam-footer .btn-secondary {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-submit-exam {
+  background: #2563EB;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.btn-submit-exam:hover { background: #1D4ED8; }
 
 /* ─── MODAL ───────────────────────────────────────────────── */
 .modal-overlay {
@@ -491,15 +487,6 @@ html, body {
 .modal-btn--nav:hover { background: #1D4ED8; }
 
 /* ─── HALAMAN HASIL ───────────────────────────────────────── */
-body.peserta-result {
-  overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 24px;
-}
-
 .result-page {
   min-height: 100vh;
   display: flex;
@@ -519,18 +506,19 @@ body.peserta-result {
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 
-.result-header {
+.result-card-header {
   background: #0F1E3C;
   padding: 28px 24px 24px;
   text-align: center;
 }
-.result-header-label {
-  color: rgba(255,255,255,0.45);
+.result-card-header p {
+  color: rgba(255,255,255,0.5);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.7px;
   margin-bottom: 8px;
 }
+
 .result-score {
   font-size: 60px;
   font-weight: 800;
@@ -538,8 +526,8 @@ body.peserta-result {
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
-.result-score-sub {
-  color: rgba(255,255,255,0.38);
+.result-score-label {
+  color: rgba(255,255,255,0.4);
   font-size: 12px;
   margin-top: 4px;
 }
@@ -579,7 +567,7 @@ body.peserta-result {
 
 .btn-back-dashboard {
   display: block;
-  margin: 4px 24px 24px;
+  margin: 16px 24px 24px;
   text-align: center;
   padding: 11px;
   background: #0F1E3C;

@@ -5,6 +5,12 @@ cekAdmin();
 $msg = '';
 $error = '';
 
+// Ambil pesan flash dari redirect sebelumnya (kalau ada)
+if (isset($_SESSION['flash_msg'])) {
+    $msg = $_SESSION['flash_msg'];
+    unset($_SESSION['flash_msg']);
+}
+
 // Toggle aktif/nonaktif
 if (isset($_GET['toggle'])) {
     $id  = (int)$_GET['toggle'];
@@ -13,13 +19,49 @@ if (isset($_GET['toggle'])) {
     $upd = $conn->prepare("UPDATE sesi_ujian SET status=? WHERE id=?");
     $upd->bind_param("si", $new, $id);
     $upd->execute();
-    $msg = $new === 'aktif' ? 'Sesi berhasil diaktifkan.' : 'Sesi dinonaktifkan.';
+    $_SESSION['flash_msg'] = $new === 'aktif' ? 'Sesi berhasil diaktifkan.' : 'Sesi dinonaktifkan.';
+    redirect('/admin/sesi.php');
 }
 
-// Hapus
+// Hapus (dengan opsi force untuk hapus sesi + semua nilai terkait)
 if (isset($_GET['hapus'])) {
-    $conn->query("DELETE FROM sesi_ujian WHERE id=".(int)$_GET['hapus']);
-    $msg = 'Sesi ujian dihapus.';
+    $del_id = (int)$_GET['hapus'];
+    $force  = isset($_GET['force']);
+
+    // Cek dulu apakah sesi ini punya hasil ujian terkait
+    $cek = $conn->prepare("SELECT COUNT(*) as n FROM hasil_ujian WHERE sesi_id=?");
+    $cek->bind_param("i", $del_id);
+    $cek->execute();
+    $jumlah_hasil = $cek->get_result()->fetch_assoc()['n'];
+
+    if ($jumlah_hasil > 0 && !$force) {
+        // Ada data terkait, tapi belum konfirmasi force — jangan hapus, minta konfirmasi
+        $error = 'PUNYA_HASIL:' . $del_id . ':' . $jumlah_hasil;
+    } else {
+        // Aman dihapus langsung, ATAU sudah dikonfirmasi force
+        if ($force && $jumlah_hasil > 0) {
+            // Hapus berurutan: jawaban dulu, baru hasil_ujian, baru sesi
+            $del_jwb = $conn->prepare("DELETE FROM jawaban WHERE sesi_id=?");
+            $del_jwb->bind_param("i", $del_id);
+            $del_jwb->execute();
+
+            $del_hasil = $conn->prepare("DELETE FROM hasil_ujian WHERE sesi_id=?");
+            $del_hasil->bind_param("i", $del_id);
+            $del_hasil->execute();
+        }
+
+        $del = $conn->prepare("DELETE FROM sesi_ujian WHERE id=?");
+        $del->bind_param("i", $del_id);
+
+        if ($del->execute()) {
+            $_SESSION['flash_msg'] = $force
+                ? "Sesi ujian dan {$jumlah_hasil} nilai terkait berhasil dihapus permanen."
+                : 'Sesi ujian dihapus.';
+            redirect('/admin/sesi.php');
+        } else {
+            $error = 'Gagal menghapus sesi. Silakan coba lagi.';
+        }
+    }
 }
 
 // Edit mode
@@ -44,7 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $s = $conn->prepare("UPDATE sesi_ujian SET nama_sesi=?,jenis=?,tanggal=?,jam_mulai=?,jam_selesai=?,durasi_menit=?,jumlah_soal=?,mode=? WHERE id=?");
         $s->bind_param("sssssiisi", $nama,$jenis,$tgl,$jam1,$jam2,$dur,$jml,$mode,$id);
         if ($s->execute()) {
-            $msg = 'Sesi berhasil diperbarui.';
+            $_SESSION['flash_msg'] = 'Sesi berhasil diperbarui.';
+            redirect('/admin/sesi.php');
         } else {
             $error = 'Gagal memperbarui sesi.';
         }
@@ -52,7 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $s = $conn->prepare("INSERT INTO sesi_ujian (nama_sesi,jenis,tanggal,jam_mulai,jam_selesai,durasi_menit,jumlah_soal,mode) VALUES (?,?,?,?,?,?,?,?)");
         $s->bind_param("sssssiis", $nama,$jenis,$tgl,$jam1,$jam2,$dur,$jml,$mode);
         if ($s->execute()) {
-            $msg = 'Sesi ujian berhasil dibuat.';
+            $_SESSION['flash_msg'] = 'Sesi ujian berhasil dibuat.';
+            redirect('/admin/sesi.php');
         } else {
             $error = 'Gagal membuat sesi ujian.';
         }
@@ -74,6 +118,21 @@ include __DIR__ . '/partials/layout-start.php';
     <?php if ($msg): ?>
     <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
     <?php endif; ?>
+
+    <?php
+    // Deteksi apakah $error adalah sinyal khusus "punya hasil ujian"
+    $modal_hapus_id = null;
+    $modal_hapus_jumlah = 0;
+    $modal_hapus_nama = '';
+    if ($error && strpos($error, 'PUNYA_HASIL:') === 0) {
+        [, $modal_hapus_id, $modal_hapus_jumlah] = explode(':', $error);
+        $cek_nama = $conn->prepare("SELECT nama_sesi FROM sesi_ujian WHERE id=?");
+        $cek_nama->bind_param("i", $modal_hapus_id);
+        $cek_nama->execute();
+        $modal_hapus_nama = $cek_nama->get_result()->fetch_assoc()['nama_sesi'] ?? '';
+        $error = ''; // jangan tampilkan sebagai alert biasa
+    }
+    ?>
 
     <?php if ($error): ?>
     <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
@@ -168,8 +227,7 @@ include __DIR__ . '/partials/layout-start.php';
     <div class="card">
       <div class="card-header">
       <h3>Daftar sesi ujian</h3>
-      <a href="sesi.php?action=tambah" class="btn-admin-primary" 
-        style="font-size:13px;padding:8px 14px;">
+      <a href="sesi.php?action=tambah" class="btn-admin-primary btn-sm">
         <?= admin_icon('plus') ?> Buat sesi baru
       </a>
     </div>
@@ -216,8 +274,9 @@ include __DIR__ . '/partials/layout-start.php';
               </span>
             </td>
             <td>
-              <a href="sesi.php?toggle=<?= $s['id'] ?>"
-                 class="<?= $s['status'] === 'aktif' ? 'toggle-on' : 'toggle-off' ?>">
+              <a href="#"
+                class="<?= $s['status'] === 'aktif' ? 'toggle-on' : 'toggle-off' ?>"
+                onclick="konfirmasiToggle(<?= (int)$s['id'] ?>, '<?= $s['status'] === 'aktif' ? 'nonaktif' : 'aktif' ?>', '<?= htmlspecialchars(addslashes($s['nama_sesi'])) ?>'); return false;">
                 <?= $s['status'] === 'aktif' ? '● Aktif' : '○ Nonaktif' ?>
               </a>
             </td>
@@ -248,5 +307,97 @@ include __DIR__ . '/partials/layout-start.php';
         </div>
       <?php endif; ?>
     </div>
+    
+
+    <!-- Modal konfirmasi toggle status -->
+    <div class="modal-overlay" id="modal-toggle-status">
+      <div class="modal-box">
+        <div class="modal-icon modal-icon--info" id="toggle-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4l3 3"/>
+          </svg>
+        </div>
+        <h2 class="modal-title" id="toggle-title">Ubah status sesi?</h2>
+        <p class="modal-text" id="toggle-text">
+          Sesi akan diubah statusnya.
+        </p>
+        <div class="modal-actions">
+          <a href="#" id="btn-toggle-confirm" class="modal-btn modal-btn--primary">
+            Ya, lanjutkan
+          </a>
+          <button type="button" class="modal-btn modal-btn--secondary" onclick="tutupToggleModal()">
+            Batal
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+    function konfirmasiToggle(id, statusTujuan, namaSesi) {
+        const judul = document.getElementById('toggle-title');
+        const teks  = document.getElementById('toggle-text');
+        const btn   = document.getElementById('btn-toggle-confirm');
+
+        if (statusTujuan === 'aktif') {
+            judul.textContent = 'Aktifkan sesi ini?';
+            teks.innerHTML = 'Sesi <strong>' + namaSesi + '</strong> akan aktif dan bisa diakses peserta yang sesuai jadwal.';
+        } else {
+            judul.textContent = 'Nonaktifkan sesi ini?';
+            teks.innerHTML = 'Sesi <strong>' + namaSesi + '</strong> akan disembunyikan dari peserta. Data nilai yang sudah ada tetap aman tersimpan.';
+        }
+
+        btn.href = 'sesi.php?toggle=' + id;
+        document.getElementById('modal-toggle-status').classList.add('show');
+    }
+
+    function tutupToggleModal() {
+        document.getElementById('modal-toggle-status').classList.remove('show');
+    }
+    </script>
+
+    <?php if ($modal_hapus_id): ?>
+
+  <div class="modal-overlay show" id="modal-hapus-paksa">
+    <div class="modal-box">
+      <div class="modal-icon modal-icon--alert" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h2 class="modal-title">Sesi ini punya data nilai</h2>
+      <p class="modal-text">
+        Sesi <strong><?= htmlspecialchars($modal_hapus_nama) ?></strong> sudah dikerjakan
+        oleh <strong style="color:var(--danger)"><?= (int)$modal_hapus_jumlah ?> peserta</strong>.
+        Menghapus sesi ini akan <strong>menghapus permanen semua nilai mereka juga</strong>
+        — tindakan ini tidak bisa dibatalkan.
+        <br><br>
+        Ketik nama sesi persis untuk konfirmasi:
+      </p>
+      <div style="padding:0 24px 16px;">
+        <input type="text" id="konfirmasi-nama-sesi" class="form-input"
+              placeholder="<?= htmlspecialchars($modal_hapus_nama) ?>"
+              oninput="cekKonfirmasiSesi()">
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-hapus-paksa" class="modal-btn modal-btn--danger" disabled
+                onclick="window.location='sesi.php?hapus=<?= (int)$modal_hapus_id ?>&force=1'">
+          Hapus permanen (<?= (int)$modal_hapus_jumlah ?> nilai ikut terhapus)
+        </button>
+        <button type="button" class="modal-btn modal-btn--secondary" onclick="window.location='sesi.php'">
+          Batal, jangan hapus
+        </button>
+      </div>
+    </div>
+  </div>
+<script>
+function cekKonfirmasiSesi() {
+    const target = <?= json_encode($modal_hapus_nama) ?>;
+    const input  = document.getElementById('konfirmasi-nama-sesi').value;
+    document.getElementById('btn-hapus-paksa').disabled = (input !== target);
+}
+</script>
+<?php endif; ?>
 
 <?php include __DIR__ . '/partials/layout-end.php'; ?>

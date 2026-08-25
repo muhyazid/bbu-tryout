@@ -1,0 +1,190 @@
+{
+  "communities": {
+    "0": [
+      "includes_sesi_helper",
+      "includes_sesi_helper_cari_sesi_aktif_peserta",
+      "includes_sesi_helper_normalisasi_jam",
+      "includes_sesi_helper_validasi_sesi_peserta",
+      "mysqli"
+    ],
+    "1": [
+      "session",
+      "session_cekadmin",
+      "session_cekpeserta",
+      "session_redirect"
+    ],
+    "2": [
+      "includes_helpers",
+      "includes_helpers_e",
+      "includes_helpers_url"
+    ],
+    "3": [
+      "admin_partials_icons",
+      "admin_partials_icons_admin_icon"
+    ],
+    "4": [
+      "admin_dashboard"
+    ],
+    "5": [
+      "admin_hasil"
+    ],
+    "6": [
+      "admin_log"
+    ],
+    "7": [
+      "admin_partials_head"
+    ],
+    "8": [
+      "admin_partials_layout_end"
+    ],
+    "9": [
+      "admin_partials_layout_start"
+    ],
+    "10": [
+      "admin_partials_page_header"
+    ],
+    "11": [
+      "admin_partials_sidebar"
+    ],
+    "12": [
+      "admin_peserta"
+    ],
+    "13": [
+      "admin_sesi"
+    ],
+    "14": [
+      "admin_soal"
+    ],
+    "15": [
+      "check_schema"
+    ],
+    "16": [
+      "config_example"
+    ],
+    "17": [
+      "database"
+    ],
+    "18": [
+      "includes_constants"
+    ],
+    "19": [
+      "index"
+    ],
+    "20": [
+      "logout"
+    ],
+    "21": [
+      "peserta_dashboard"
+    ],
+    "22": [
+      "peserta_log"
+    ],
+    "23": [
+      "peserta_partials_head"
+    ],
+    "24": [
+      "peserta_partials_header"
+    ],
+    "25": [
+      "peserta_partials_layout_end"
+    ],
+    "26": [
+      "peserta_partials_layout_start"
+    ],
+    "27": [
+      "peserta_ujian"
+    ]
+  },
+  "cohesion": {
+    "0": 0.6,
+    "1": 0.8333333333333334,
+    "2": 0.6666666666666666,
+    "3": 1.0,
+    "4": 1.0,
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0
+  },
+  "gods": [
+    {
+      "id": "session_redirect",
+      "label": "redirect()",
+      "degree": 4
+    },
+    {
+      "id": "includes_sesi_helper_cari_sesi_aktif_peserta",
+      "label": "cari_sesi_aktif_peserta()",
+      "degree": 3
+    },
+    {
+      "id": "includes_helpers_url",
+      "label": "url()",
+      "degree": 2
+    },
+    {
+      "id": "includes_sesi_helper_normalisasi_jam",
+      "label": "normalisasi_jam()",
+      "degree": 2
+    },
+    {
+      "id": "includes_sesi_helper_validasi_sesi_peserta",
+      "label": "validasi_sesi_peserta()",
+      "degree": 2
+    },
+    {
+      "id": "session_cekadmin",
+      "label": "cekAdmin()",
+      "degree": 2
+    },
+    {
+      "id": "session_cekpeserta",
+      "label": "cekPeserta()",
+      "degree": 2
+    }
+  ],
+  "surprises": [
+    {
+      "source": "redirect()",
+      "target": "url()",
+      "source_files": [
+        "session.php",
+        "includes/helpers.php"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `redirect()` connect `redirect` to `helpers.php`?",
+      "why": "High betweenness centrality (0.014) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `url()` connect `helpers.php` to `redirect`?",
+      "why": "High betweenness centrality (0.012) - this node is a cross-community bridge."
+    }
+  ]
+}

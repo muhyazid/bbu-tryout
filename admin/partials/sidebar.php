@@ -4,7 +4,9 @@ $admin_page = $admin_page ?? '';
 $nav = [
     'dashboard' => ['label' => 'Dashboard', 'href' => 'dashboard.php', 'icon' => 'dashboard'],
     'soal'      => ['label' => 'Bank Soal', 'href' => 'soal.php',      'icon' => 'soal'],
+    'paket'     => ['label' => 'Kelola Paket','href' => 'paket.php',   'icon' => 'sesi'],
     'peserta'   => ['label' => 'Peserta',   'href' => 'peserta.php',   'icon' => 'peserta'],
+    'kelompok'  => ['label' => 'Kelola Kelompok','href' => 'kelompok.php', 'icon' => 'peserta'],
     'sesi'      => ['label' => 'Sesi Ujian','href' => 'sesi.php',      'icon' => 'sesi'],
     'hasil'     => ['label' => 'Rekap Nilai','href' => 'hasil.php',    'icon' => 'hasil'],
     'log'       => ['label' => 'Log Aktivitas','href' => 'log.php',    'icon' => 'log'],

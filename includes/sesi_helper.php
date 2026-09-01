@@ -17,19 +17,19 @@ function normalisasi_jam(string $jam): string
 /**
  * @return array<string, mixed>|null
  */
-function cari_sesi_aktif_peserta(mysqli $conn, string $jenis): ?array
+function cari_sesi_aktif_peserta(mysqli $conn, int $paket_id): ?array
 {
     $today = date('Y-m-d');
 
     $stmt = $conn->prepare("
         SELECT * FROM sesi_ujian
         WHERE status = 'aktif'
-          AND jenis = ?
+          AND paket_id = ?
           AND tanggal = ?
         ORDER BY id DESC
         LIMIT 1
     ");
-    $stmt->bind_param('ss', $jenis, $today);
+    $stmt->bind_param('is', $paket_id, $today);
     $stmt->execute();
     $sesi = $stmt->get_result()->fetch_assoc();
     if (!$sesi) {
@@ -59,17 +59,17 @@ function cari_sesi_aktif_peserta(mysqli $conn, string $jenis): ?array
 /**
  * @return array<string, mixed>|null
  */
-function validasi_sesi_peserta(mysqli $conn, int $sesi_id, string $jenis): ?array
+function validasi_sesi_peserta(mysqli $conn, int $sesi_id, int $paket_id): ?array
 {
     $stmt = $conn->prepare("
         SELECT * FROM sesi_ujian
         WHERE id = ?
           AND status = 'aktif'
-          AND jenis = ?
+          AND paket_id = ?
           AND tanggal = CURDATE()
         LIMIT 1
     ");
-    $stmt->bind_param('is', $sesi_id, $jenis);
+    $stmt->bind_param('ii', $sesi_id, $paket_id);
     $stmt->execute();
     $sesi = $stmt->get_result()->fetch_assoc();
 

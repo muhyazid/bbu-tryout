@@ -2,25 +2,56 @@
 require_once '../config.php';
 cekPeserta();
 
-$peserta_id   = $_SESSION['peserta_id'];
-$peserta_nama = $_SESSION['peserta_nama'];
-$peserta_jenis= $_SESSION['peserta_jenis'];
-$nama_depan   = explode(' ', $peserta_nama)[0];
+$peserta_id     = $_SESSION['peserta_id'];
+$peserta_nama   = $_SESSION['peserta_nama'];
+$peserta_paket_id = $_SESSION['peserta_paket_id'];
+$peserta_paket_nama = $_SESSION['peserta_paket_nama'];
+$nama_depan     = explode(' ', $peserta_nama)[0];
 
-$sesi = cari_sesi_aktif_peserta($conn, $peserta_jenis);
+$sesi = cari_sesi_aktif_peserta($conn, $peserta_paket_id);
 
-$sudah_kerjakan = false;
+$sudah_kerjakan   = false;
+$sedang_dijeda    = false;
+$bisa_lanjut      = false;
+$hasil_row        = null;
+
 if ($sesi) {
-    $cek = $conn->prepare("SELECT id FROM hasil_ujian WHERE peserta_id=? AND sesi_id=?");
+    $cek = $conn->prepare("SELECT * FROM hasil_ujian WHERE peserta_id=? AND sesi_id=?");
     $cek->bind_param("ii", $peserta_id, $sesi['id']);
     $cek->execute();
-    $sudah_kerjakan = $cek->get_result()->num_rows > 0;
+    $hasil_row = $cek->get_result()->fetch_assoc();
+
+    if ($hasil_row) {
+        if ($hasil_row['status_pengerjaan'] === 'selesai') {
+            $sudah_kerjakan = true;
+        } elseif ($hasil_row['status_pengerjaan'] === 'dijeda') {
+            $sedang_dijeda = true;
+        } elseif ($hasil_row['status_pengerjaan'] === 'sedang_dikerjakan') {
+            // Cek apakah kelompok peserta ini SEKARANG statusnya dijeda
+            // (mencegah kasus: kelompok baru saja dijeda tapi status hasil_ujian belum keupdate)
+            $cek_kelompok = $conn->prepare("
+                SELECT kg.status FROM kelompok_anggota ka
+                JOIN kelompok_angkatan kg ON ka.kelompok_id = kg.id
+                WHERE ka.peserta_id = ?
+            ");
+            $cek_kelompok->bind_param("i", $peserta_id);
+            $cek_kelompok->execute();
+            $status_kelompok = $cek_kelompok->get_result()->fetch_assoc();
+
+            if ($status_kelompok && $status_kelompok['status'] === 'dijeda') {
+                $sedang_dijeda = true;
+            } else {
+                $bisa_lanjut = true; // sedang mengerjakan, boleh lanjut (misal browser ke-refresh)
+            }
+        }
+    }
 }
 
 $stmt2 = $conn->prepare("
-    SELECT h.*, s.nama_sesi, s.jenis, s.mode
+    SELECT h.*, s.nama_sesi, s.mode, pp.nama AS paket_nama
     FROM hasil_ujian h
     JOIN sesi_ujian s ON h.sesi_id = s.id
+    JOIN paket_program pp ON s.paket_id = pp.id
     WHERE h.peserta_id = ?
     ORDER BY h.submitted_at DESC
     LIMIT 10
@@ -36,10 +67,41 @@ include __DIR__ . '/partials/layout-start.php';
 
     <section class="peserta-welcome">
         <h2>Selamat datang, <?= e($nama_depan) ?></h2>
-        <p>Program <?= e($peserta_jenis) ?> — gunakan halaman ini untuk memulai ujian dan melihat nilai.</p>
+        <p>Program <?= e($peserta_paket_nama) ?> - gunakan halaman ini untuk memulai ujian dan melihat nilai.</p>
+    </section>
+    
+    <?php if ($sesi && $sedang_dijeda): ?>
+    <section class="status-card status-card--paused">
+        <div class="status-icon status-icon--wait" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <rect x="6" y="4" width="4" height="16"/>
+                <rect x="14" y="4" width="4" height="16"/>
+            </svg>
+        </div>
+        <h3>Ujian Anda sedang dijeda</h3>
+        <p class="status-desc">
+            Pengawas sedang menjeda sesi ini sementara.<br>
+            Waktu Anda tersimpan aman — silakan tunggu instruksi untuk melanjutkan.
+        </p>
     </section>
 
-    <?php if ($sesi && !$sudah_kerjakan): ?>
+    <?php elseif ($sesi && ($bisa_lanjut)): ?>
+    <section class="status-card status-card--active">
+        <p class="status-label" id="ujian-aktif-label">
+            <span class="dot" aria-hidden="true"></span>
+            Ujian sedang berlangsung
+        </p>
+        <h3 id="ujian-aktif-title"><?= e($sesi['nama_sesi']) ?></h3>
+        <div class="alert-box" role="note">
+            Anda memiliki ujian yang belum selesai. Klik tombol di bawah untuk melanjutkan.
+        </div>
+        <a href="ujian.php?sesi_id=<?= (int)$sesi['id'] ?>" class="btn-primary-lg">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Lanjutkan ujian
+        </a>
+    </section>
+
+    <?php elseif ($sesi && !$sudah_kerjakan): ?>
     <section class="status-card status-card--active" aria-labelledby="ujian-aktif-title">
         <p class="status-label" id="ujian-aktif-label">
             <span class="dot" aria-hidden="true"></span>
@@ -55,7 +117,7 @@ include __DIR__ . '/partials/layout-start.php';
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <?= (int)$sesi['durasi_menit'] ?> menit
             </span>
-            <span><?= e($sesi['jenis']) ?> · <?= e(ucfirst($sesi['mode'])) ?></span>
+            <span><?= e($peserta_paket_nama) ?> · <?= e(ucfirst($sesi['mode'])) ?></span>
         </div>
         <?php if (!empty($sesi['info_jadwal'])): ?>
         <div class="alert-box" role="note" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af;">
@@ -101,7 +163,7 @@ include __DIR__ . '/partials/layout-start.php';
         </p>
     </section>
     <?php endif; ?>
-
+    
     <section class="panel" aria-labelledby="riwayat-title">
         <div class="panel-header">
             <h3 id="riwayat-title">Riwayat nilai saya</h3>
@@ -121,12 +183,11 @@ include __DIR__ . '/partials/layout-start.php';
             <tbody>
             <?php while ($r = $riwayat->fetch_assoc()):
                 $lulus = $r['skor'] >= 70;
-                $jenis_lower = strtolower($r['jenis']);
             ?>
                 <tr>
                     <td data-label="Sesi ujian">
                         <div class="sesi-name"><?= e($r['nama_sesi']) ?></div>
-                        <span class="tag tag--<?= $jenis_lower === 'gmdss' ? 'gmdss' : 'sou' ?>"><?= e($r['jenis']) ?></span>
+                        <span class="tag tag--paket"><?= e($r['paket_nama']) ?></span>
                         <span class="tag tag--<?= e($r['mode']) ?>"><?= e(ucfirst($r['mode'])) ?></span>
                     </td>
                     <td data-label="Nilai">
@@ -142,6 +203,12 @@ include __DIR__ . '/partials/layout-start.php';
                     </td>
                     <td data-label="Tanggal">
                         <?= date('d M Y', strtotime($r['submitted_at'])) ?>
+                    </td>
+                    <th>Aksi</th>
+                    <td data-label="Aksi">
+                        <a href="<?= url('/review.php?hasil_id=' . $r['id']) ?>" target="_blank" class="btn-link">
+                            Lihat review
+                        </a>
                     </td>
                 </tr>
             <?php endwhile; ?>

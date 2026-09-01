@@ -695,3 +695,43 @@ body {
   font-weight: 500;
   white-space: nowrap;
 }
+
+/* ============================================================
+   TAMBAHAN — Halaman Kelola Paket (admin/paket.php)
+   ============================================================ */
+
+.paket-checklist {
+  display: flex;
+  flex-direction: column;
+}
+
+.paket-check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border-bottom: 1px solid #F1F5F9;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.paket-check-row:last-child { border-bottom: none; }
+.paket-check-row:hover { background: #FAFBFC; }
+
+.paket-check-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.paket-check-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.badge-paket {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}

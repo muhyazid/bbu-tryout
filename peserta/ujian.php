@@ -2,19 +2,51 @@
 require_once '../config.php';
 cekPeserta();
 
-$sesi_id       = (int)($_GET['sesi_id'] ?? 0);
-$peserta_id    = $_SESSION['peserta_id'];
-$peserta_jenis = $_SESSION['peserta_jenis'];
-$peserta_nama  = $_SESSION['peserta_nama'];
+$sesi_id          = (int)($_GET['sesi_id'] ?? 0);
+$peserta_id       = $_SESSION['peserta_id'];
+$peserta_paket_id = $_SESSION['peserta_paket_id'];
+$peserta_nama     = $_SESSION['peserta_nama'];
 
-$sesi = validasi_sesi_peserta($conn, $sesi_id, $peserta_jenis);
+$sesi = validasi_sesi_peserta($conn, $sesi_id, $peserta_paket_id);
 if (!$sesi) redirect('/peserta/dashboard.php');
 
-// Cek sudah submit
-$cek = $conn->prepare("SELECT id FROM hasil_ujian WHERE peserta_id=? AND sesi_id=?");
+// Cek status pengerjaan yang sudah ada
+$cek = $conn->prepare("SELECT * FROM hasil_ujian WHERE peserta_id=? AND sesi_id=?");
 $cek->bind_param("ii", $peserta_id, $sesi_id);
 $cek->execute();
-if ($cek->get_result()->num_rows > 0) redirect('/peserta/dashboard.php');
+$hasil_existing = $cek->get_result()->fetch_assoc();
+
+if ($hasil_existing && $hasil_existing['status_pengerjaan'] === 'selesai') {
+    redirect('/peserta/dashboard.php');
+}
+
+// Cek apakah kelompok peserta ini sedang dijeda — kalau ya, tolak akses
+$cek_kelompok = $conn->prepare("
+    SELECT kg.status FROM kelompok_anggota ka
+    JOIN kelompok_angkatan kg ON ka.kelompok_id = kg.id
+    WHERE ka.peserta_id = ?
+");
+$cek_kelompok->bind_param("i", $peserta_id);
+$cek_kelompok->execute();
+$status_kelompok = $cek_kelompok->get_result()->fetch_assoc();
+
+if ($status_kelompok && $status_kelompok['status'] === 'dijeda') {
+    redirect('/peserta/dashboard.php');
+}
+
+// Kalau BELUM PERNAH mulai sama sekali, catat waktu_mulai SEKARANG
+if (!$hasil_existing) {
+    $ins_mulai = $conn->prepare("
+        INSERT INTO hasil_ujian (peserta_id, sesi_id, status_pengerjaan, waktu_mulai, total_soal, total_benar, total_salah, skor, durasi_detik)
+        VALUES (?, ?, 'sedang_dikerjakan', NOW(), 0, 0, 0, 0, 0)
+    ");
+    $ins_mulai->bind_param("ii", $peserta_id, $sesi_id);
+    $ins_mulai->execute();
+
+    // Ambil ulang row yang baru dibuat
+    $cek->execute();
+    $hasil_existing = $cek->get_result()->fetch_assoc();
+}
 
 $phase  = 'exam';
 $result = null;
@@ -29,10 +61,11 @@ if (!isset($_SESSION[$skey])) {
         SELECT s.id, k.id AS kat_id, k.nama AS kat_nama
         FROM soal s
         JOIN kategori k ON s.kategori_id = k.id
-        WHERE k.jenis = ?
+        JOIN paket_kategori pk ON pk.kategori_id = k.id
+        WHERE pk.paket_id = ?
         ORDER BY k.id, s.id
     ");
-    $stmt->bind_param("s", $peserta_jenis);
+    $stmt->bind_param("i", $peserta_paket_id);
     $stmt->execute();
     $res = $stmt->get_result();
 
@@ -107,25 +140,52 @@ $soal_ids     = $_SESSION[$skey]['ids'];
 $mapel_map    = $_SESSION[$skey]['mapel_map'];
 $mapel_ranges = $_SESSION[$skey]['mapel_ranges'];
 
+
+
 // ── HANDLE SUBMIT ─────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
     $total = count($soal_ids);
     $benar = 0;
+    $kunci_map = []; // soal_id => ['jawaban_benar' => 'A', 'bobot' => 2, 'kategori_id' => 5]
 
-    // Ambil semua kunci jawaban sekaligus (hindari N+1 query)
-    $id_str    = implode(',', array_map('intval', $soal_ids));
-    $kunci_res = $conn->query("SELECT id, jawaban_benar FROM soal WHERE id IN ($id_str)");
-    $kunci_map = [];
-    while ($k = $kunci_res->fetch_assoc()) {
-        $kunci_map[$k['id']] = $k['jawaban_benar'];
+    // Ambil kunci jawaban + bobot + kategori sekaligus (hindari N+1 query)
+    if (!empty($soal_ids)) {
+        $id_str    = implode(',', array_map('intval', $soal_ids));
+        $kunci_res = $conn->query("SELECT id, jawaban_benar, bobot, kategori_id FROM soal WHERE id IN ($id_str)");
+        while ($k = $kunci_res->fetch_assoc()) {
+            $kunci_map[$k['id']] = $k;
+        }
     }
 
+    // Akumulasi nilai per kategori sambil looping jawaban
+    $rekap_per_kategori = []; // kategori_id => ['didapat' => x, 'maksimal' => y]
+    $total_bobot_didapat  = 0;
+    $total_bobot_maksimal = 0;
+
     foreach ($soal_ids as $sid2) {
-        $jwb = isset($_POST['jwb_'.$sid2]) && $_POST['jwb_'.$sid2] !== ''
-               ? $_POST['jwb_'.$sid2]
-               : null;
-        $ib  = ($jwb && isset($kunci_map[$sid2]) && $jwb === $kunci_map[$sid2]) ? 1 : 0;
+        $jwb    = isset($_POST['jwb_'.$sid2]) && $_POST['jwb_'.$sid2] !== ''
+                  ? $_POST['jwb_'.$sid2]
+                  : null;
+        $info   = $kunci_map[$sid2] ?? null;
+        $bobot  = $info ? (int)$info['bobot'] : 2; // fallback 2 kalau data tidak ketemu (seharusnya tidak terjadi)
+        $kat_id = $info ? (int)$info['kategori_id'] : 0;
+
+        $ib = ($jwb && $info && $jwb === $info['jawaban_benar']) ? 1 : 0;
         if ($ib) $benar++;
+
+        // Akumulasi ke rekap per kategori
+        if (!isset($rekap_per_kategori[$kat_id])) {
+            $rekap_per_kategori[$kat_id] = ['didapat' => 0, 'maksimal' => 0];
+        }
+        $rekap_per_kategori[$kat_id]['maksimal'] += $bobot;
+        if ($ib) {
+            $rekap_per_kategori[$kat_id]['didapat'] += $bobot;
+        }
+
+        $total_bobot_maksimal += $bobot;
+        if ($ib) {
+            $total_bobot_didapat += $bobot;
+        }
 
         $ins = $conn->prepare("INSERT INTO jawaban (peserta_id,sesi_id,soal_id,jawaban_dipilih,is_benar) VALUES (?,?,?,?,?)");
         $ins->bind_param("iiisi", $peserta_id, $sesi_id, $sid2, $jwb, $ib);
@@ -135,12 +195,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
     }
 
     $salah  = $total - $benar;
-    $skor   = $total > 0 ? round($benar / $total * 100) : 0;
+    // Skor total tetap dihitung dari bobot (bukan lagi jumlah soal biasa)
+    $skor   = $total_bobot_maksimal > 0 ? round($total_bobot_didapat / $total_bobot_maksimal * 100) : 0;
     $durasi = (int)($_POST['durasi_detik'] ?? 0);
 
-    $ins2 = $conn->prepare("INSERT INTO hasil_ujian (peserta_id,sesi_id,total_soal,total_benar,total_salah,skor,durasi_detik) VALUES (?,?,?,?,?,?,?)");
-    $ins2->bind_param("iiiiiii", $peserta_id, $sesi_id, $total, $benar, $salah, $skor, $durasi);
-    if (!$ins2->execute()) {
+    $ins2 = $conn->prepare("
+        UPDATE hasil_ujian
+        SET total_soal=?, total_benar=?, total_salah=?, skor=?, durasi_detik=?,
+            status_pengerjaan='selesai', submitted_at=NOW()
+        WHERE peserta_id=? AND sesi_id=?
+    ");
+    $ins2->bind_param("iiiiiii", $total, $benar, $salah, $skor, $durasi, $peserta_id, $sesi_id);
+    if ($ins2->execute()) {
+        $hasil_ujian_id = $hasil_existing['id'];
+
+        // Simpan rincian nilai per materi
+        $ins_materi = $conn->prepare("INSERT INTO hasil_per_materi (hasil_ujian_id, kategori_id, total_bobot_didapat, total_bobot_maksimal) VALUES (?,?,?,?)");
+        foreach ($rekap_per_kategori as $kat_id => $rekap) {
+            if ($kat_id === 0) continue; // lewati kalau ada data tidak valid
+            $ins_materi->bind_param("iiii", $hasil_ujian_id, $kat_id, $rekap['didapat'], $rekap['maksimal']);
+            if (!$ins_materi->execute()) {
+                error_log("Gagal insert hasil_per_materi: kategori_id=$kat_id, hasil_ujian_id=$hasil_ujian_id");
+            }
+        }
+    } else {
         error_log("Gagal insert hasil ujian: peserta_id=$peserta_id, sesi_id=$sesi_id");
     }
 
@@ -161,8 +239,8 @@ if ($phase === 'exam' && !empty($soal_ids)) {
     while ($s = $soal_res->fetch_assoc()) $soal_arr[] = $s;
 }
 
-$page_title  = 'Ujian — ' . e($sesi['nama_sesi']);
-$timer_awal  = sprintf('%02d:00', (int)$sesi['durasi_menit']);
+$page_title    = 'Ujian — ' . e($sesi['nama_sesi']);
+$sisa_detik_awal = hitung_sisa_waktu_detik($hasil_existing, (int)$sesi['durasi_menit']);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -236,14 +314,15 @@ $timer_awal  = sprintf('%02d:00', (int)$sesi['durasi_menit']);
     </div>
     <div class="exam-timer-wrap">
       <span class="exam-timer-label">Sisa waktu</span>
-      <div id="timer" class="exam-timer"><?= $timer_awal ?></div>
+      <div id="timer" class="exam-timer"><?= sprintf('%02d:%02d', floor($sisa_detik_awal / 60), $sisa_detik_awal % 60) ?></div>
     </div>
     <div class="exam-user">
       <span><?= e($peserta_nama) ?></span>
-      <span><?= e($peserta_jenis) ?></span>
+      <span><?= e($_SESSION['peserta_paket_nama']) ?></span>
     </div>
   </header>
 
+  
   <!-- Form ujian -->
   <form method="POST" id="exam-form">
     <input type="hidden" name="submit_ujian" value="1">
@@ -260,6 +339,21 @@ $timer_awal  = sprintf('%02d:00', (int)$sesi['durasi_menit']);
           <p>Silakan hubungi pengawas atau admin untuk menambahkan soal.</p>
         </div>
         <?php else: ?>
+
+        <?php
+        // Ambil jawaban yang sudah tersimpan sebelumnya (untuk kasus resume setelah dijeda)
+        $jawaban_tersimpan = [];
+        if (!empty($soal_ids)) {
+            $id_str_jwb = implode(',', array_map('intval', $soal_ids));
+            $res_jwb = $conn->query("
+                SELECT soal_id, jawaban_dipilih FROM jawaban
+                WHERE peserta_id=$peserta_id AND sesi_id=$sesi_id AND soal_id IN ($id_str_jwb)
+            ");
+            while ($rj = $res_jwb->fetch_assoc()) {
+                $jawaban_tersimpan[$rj['soal_id']] = $rj['jawaban_dipilih'];
+            }
+        }
+        ?>
 
         <?php foreach ($soal_arr as $i => $soal):
             $no_global   = $i + 1;
@@ -292,14 +386,20 @@ $timer_awal  = sprintf('%02d:00', (int)$sesi['durasi_menit']);
           </div>
           <div class="soal-text"><?= nl2br(e($soal['pertanyaan'])) ?></div>
           <div class="jwb-grid" role="group" aria-label="Pilihan jawaban soal <?= $no_global ?>">
-            <?php foreach (['A','B','C','D'] as $opt): ?>
-            <button type="button" class="jwb-option"
+            <?php
+            $jwb_sudah_dipilih = $jawaban_tersimpan[$soal['id']] ?? null;
+            ?>
+            <?php foreach (['A','B','C','D'] as $opt):
+                $sudah_selected = ($jwb_sudah_dipilih === $opt);
+            ?>
+            <button type="button" class="jwb-option<?= $sudah_selected ? ' selected' : '' ?>"
                     id="btn-<?= $soal['id'] ?>-<?= $opt ?>"
                     onclick="pilihJawaban(<?= $soal['id'] ?>,'<?= $opt ?>')">
-              <span class="jwb-letter"><?= $opt ?></span>
+              <span class="jwb-letter" <?= $sudah_selected ? 'style="background:var(--accent);color:#fff;"' : '' ?>><?= $opt ?></span>
               <span><?= e($soal['pilihan_'.strtolower($opt)]) ?></span>
               <input type="radio" name="jwb_<?= $soal['id'] ?>" value="<?= $opt ?>"
-                     id="r-<?= $soal['id'] ?>-<?= $opt ?>" style="display:none;">
+                    id="r-<?= $soal['id'] ?>-<?= $opt ?>" style="display:none;"
+                    <?= $sudah_selected ? 'checked' : '' ?>>
             </button>
             <?php endforeach; ?>
           </div>
@@ -318,9 +418,12 @@ $timer_awal  = sprintf('%02d:00', (int)$sesi['durasi_menit']);
           <div class="grid-mapel-section">
             <div class="grid-mapel-label"><?= e($mr['nama']) ?></div>
             <div class="soal-num-grid" id="grid-<?= $mr['start'] ?>">
-              <?php for ($n = $mr['start']; $n <= $mr['end']; $n++): ?>
+              <?php for ($n = $mr['start']; $n <= $mr['end']; $n++):
+                  $soal_di_posisi_ini = $soal_arr[$n - 1]['id'] ?? null;
+                  $sudah_dijawab = $soal_di_posisi_ini && isset($jawaban_tersimpan[$soal_di_posisi_ini]) && $jawaban_tersimpan[$soal_di_posisi_ini] !== null;
+              ?>
               <button type="button"
-                      class="soal-num-btn unanswered"
+                      class="soal-num-btn <?= $sudah_dijawab ? 'answered' : 'unanswered' ?>"
                       id="gnum-<?= $n ?>"
                       onclick="scrollToSoal(<?= $n ?>)">
                 <?= $n ?>
@@ -425,10 +528,10 @@ $timer_awal  = sprintf('%02d:00', (int)$sesi['durasi_menit']);
 </div>
 
 <script>
-const SESI_ID      = <?= $sesi_id ?>;
-const DURASI_DETIK = <?= $sesi['durasi_menit'] * 60 ?>;
-const MODE         = '<?= e($sesi['mode']) ?>';
-const TOTAL_SOAL   = <?= count($soal_arr) ?>;
+const SESI_ID       = <?= $sesi_id ?>;
+const MODE          = '<?= e($sesi['mode']) ?>';
+const TOTAL_SOAL    = <?= count($soal_arr) ?>;
+
 // ── ONE QUESTION PER SCREEN ────────────────────────────────
 let currentNo = 1; // soal yang sedang ditampilkan (1-based)
 
@@ -439,7 +542,6 @@ function tampilSoal(no) {
     // Sembunyikan semua
     allCards.forEach(c => c.classList.remove('aktif'));
     allIndicators.forEach(i => i.classList.remove('aktif'));
-
     // Tampilkan soal ke-no
     if (allCards[no - 1]) allCards[no - 1].classList.add('aktif');
 
@@ -497,13 +599,14 @@ function updateNavBtn() {
 // Override scrollToSoal agar pakai one-page mode
 function scrollToSoal(no) { tampilSoal(no); }
 
-// Inisialisasi — tampilkan soal pertama
-tampilSoal(1);
-
-let sisaDetik  = DURASI_DETIK;
+let sisaDetik  = <?= $sisa_detik_awal ?>; // dihitung dari SERVER, bukan durasi penuh
 let elapsedDtk = 0;
 let tabCount   = 0;
-let answered   = 0;
+let answered = <?= count(array_filter($jawaban_tersimpan, fn($v) => $v !== null)) ?>;
+
+// Inisialisasi — tampilkan soal pertama & update progress
+tampilSoal(1);
+updateProgress();
 
 // ── TIMER ─────────────────────────────────────────────────
 const timerEl = document.getElementById('timer');
@@ -572,6 +675,20 @@ function pilihJawaban(soalId, opt) {
             updateProgress();
         }
     }
+
+    // Auto-save jawaban ke server (tidak menunggu submit akhir)
+    simpanJawabanKeServer(soalId, opt);
+}
+
+function simpanJawabanKeServer(soalId, jawaban) {
+    fetch('<?= url('/peserta/simpan_jawaban.php') ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sesi_id: SESI_ID, soal_id: soalId, jawaban: jawaban })
+    }).catch(() => {
+        // Diamkan kalau gagal — jangan ganggu pengalaman ujian peserta,
+        // jawaban tetap ada di form untuk dikirim ulang saat submit akhir
+    });
 }
 
 
@@ -640,6 +757,22 @@ if (MODE === 'ujian') {
     });
     window.addEventListener('load', () => setTimeout(mintaFullscreen, 800));
 }
+
+// ── CEK STATUS KELOMPOK SECARA BERKALA ──────────────────────
+// Kalau pengawas jeda kelompok SAAT peserta sedang ujian,
+// peserta akan otomatis diarahkan keluar dalam beberapa detik.
+setInterval(() => {
+    fetch('<?= url('/peserta/cek_status.php') ?>?sesi_id=' + SESI_ID)
+        .then(res => res.json())
+        .then(data => {
+            if (data.dijeda) {
+                clearInterval(timerInterval);
+                alert('Ujian Anda dijeda oleh pengawas. Anda akan diarahkan ke halaman utama.');
+                window.location.href = '<?= url('/peserta/dashboard.php') ?>';
+            }
+        })
+        .catch(() => {}); // diamkan kalau gagal, jangan ganggu ujian
+}, 15000); // cek tiap 15 detik
 
 // ── LOG AJAX ───────────────────────────────────────────────
 function logAktivitas(jenis) {

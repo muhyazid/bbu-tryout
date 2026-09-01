@@ -24,15 +24,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Cek peserta
-    $stmt2 = $conn->prepare("SELECT id, nama, password, jenis FROM peserta WHERE nomor_peserta = ?");
+    $stmt2 = $conn->prepare("
+        SELECT p.id, p.nama, p.password, p.paket_id, pp.nama AS paket_nama
+        FROM peserta p
+        JOIN paket_program pp ON p.paket_id = pp.id
+        WHERE p.nomor_peserta = ?
+    ");
     $stmt2->bind_param("s", $input);
     $stmt2->execute();
     $peserta = $stmt2->get_result()->fetch_assoc();
 
     if ($peserta && password_verify($pass, $peserta['password'])) {
-        $_SESSION['peserta_id']   = $peserta['id'];
-        $_SESSION['peserta_nama'] = $peserta['nama'];
-        $_SESSION['peserta_jenis']= $peserta['jenis'];
+        $_SESSION['peserta_id']         = $peserta['id'];
+        $_SESSION['peserta_nama']       = $peserta['nama'];
+        $_SESSION['peserta_paket_id']   = $peserta['paket_id'];
+        $_SESSION['peserta_paket_nama'] = $peserta['paket_nama'];
         redirect('/peserta/dashboard.php');
     }
 
@@ -44,11 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BBU Tryout — Login</title>
+    <link rel="stylesheet" href="<?= url('/assets/css/style.css') ?>">
+    <title>BBU Tryout - Login</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
+        body { 
             min-height: 100vh;
             background: #F1F5F9;
             display: flex;
@@ -56,6 +63,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             font-family: 'Inter', 'Segoe UI', sans-serif;
             padding: 20px;
+        }
+
+        body.login-bg-diagonal {
+            background-color: #F1F5F9;
+            background-image: repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 10px,
+                #E2E8F0 10px,
+                #E2E8F0 11px
+            );
         }
 
         .card {
@@ -163,11 +181,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
-<body>
+<body class="login-bg-diagonal ">
 
 <div class="card">
     <div class="logo">
-        <img src="<?= url('/assets/img/logo-bbu.jpeg') ?>" alt="Logo Bharuna Bhakti Utama">
+        <img src="<?= url('/assets/img/logo-bbu1.png') ?>" alt="Logo Bharuna Bhakti Utama">
         <h1>BBU Tryout</h1>
     </div>
 

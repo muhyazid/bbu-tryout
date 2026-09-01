@@ -3,12 +3,12 @@ require_once '../config.php';
 cekAdmin();
 
 // Filter
-$fj  = $_GET['jenis']   ?? '';
+$fj  = (int)($_GET['paket_id'] ?? 0);
 $fs  = (int)($_GET['sesi_id'] ?? 0);
 $fna = trim($_GET['nama'] ?? '');
 
 $where = "WHERE 1=1";
-if ($fj)  $where .= " AND s.jenis='"   . $conn->real_escape_string($fj)  . "'";
+if ($fj)  $where .= " AND s.paket_id=" . $fj;
 if ($fs)  $where .= " AND h.sesi_id="  . $fs;
 if ($fna) $where .= " AND p.nama LIKE '%" . $conn->real_escape_string($fna) . "%'";
 
@@ -23,7 +23,12 @@ $hasil = $conn->query("
 ");
 
 // Dropdown sesi untuk filter
-$sesi_opt = $conn->query("SELECT id, nama_sesi, jenis FROM sesi_ujian ORDER BY tanggal DESC");
+$sesi_opt = $conn->query("
+    SELECT s.id, s.nama_sesi, pp.nama AS paket_nama
+    FROM sesi_ujian s
+    JOIN paket_program pp ON s.paket_id = pp.id
+    ORDER BY s.tanggal DESC
+");
 
 // Stat ringkas
 $stat = $conn->query("
@@ -39,7 +44,7 @@ $stat = $conn->query("
 ")->fetch_assoc();
 
 $admin_page = 'hasil';
-$page_title = 'Rekap Nilai — BBU Tryout';
+$page_title = 'Rekap Nilai';
 $topbar_breadcrumb = 'Rekap Nilai';
 $topbar_title      = 'Rekap Nilai';
 
@@ -92,10 +97,14 @@ include __DIR__ . '/partials/layout-start.php';
           </div>
           <div>
             <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Program</div>
-            <select name="jenis" class="form-input">
+            <select name="paket_id" class="form-input">
               <option value="">Semua</option>
-              <option value="SOU"   <?= $fj==='SOU'   ? 'selected' : '' ?>>SOU</option>
-              <option value="GMDSS" <?= $fj==='GMDSS' ? 'selected' : '' ?>>GMDSS</option>
+              <?php
+              $opt_paket = $conn->query("SELECT id, nama FROM paket_program ORDER BY urutan");
+              while ($op = $opt_paket->fetch_assoc()):
+              ?>
+              <option value="<?= (int)$op['id'] ?>" <?= $fj === (int)$op['id'] ? 'selected' : '' ?>><?= e($op['nama']) ?></option>
+              <?php endwhile; ?>
             </select>
           </div>
           <div>
@@ -104,7 +113,7 @@ include __DIR__ . '/partials/layout-start.php';
               <option value="">Semua Sesi</option>
               <?php while ($so = $sesi_opt->fetch_assoc()): ?>
               <option value="<?= $so['id'] ?>" <?= $fs == $so['id'] ? 'selected' : '' ?>>
-                [<?= $so['jenis'] ?>] <?= htmlspecialchars($so['nama_sesi']) ?>
+                [<?= e($so['paket_nama']) ?>] <?= e($so['nama_sesi']) ?>
               </option>
               <?php endwhile; ?>
             </select>
@@ -193,6 +202,12 @@ include __DIR__ . '/partials/layout-start.php';
             <td style="font-size:12px;color:var(--text-muted);">
               <?= date('d M Y', strtotime($r['submitted_at'])) ?><br>
               <?= date('H:i', strtotime($r['submitted_at'])) ?>
+            </td>
+            <th>Review</th>
+            <td>
+                <a href="<?= url('/review.php?hasil_id=' . $r['id']) ?>" target="_blank" class="btn-icon" data-tooltip="Lihat review jawaban">
+                    <i class="fas fa-eye"></i>
+                </a>
             </td>
           </tr>
         <?php endforeach; ?>

@@ -72,10 +72,10 @@ if (isset($_GET['edit'])) {
 
 // Simpan
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id    = (int)($_POST['id'] ?? 0);
-    $nama  = trim($_POST['nama_sesi']);
-    $jenis = $_POST['jenis'];
-    $tgl   = $_POST['tanggal'];
+    $id       = (int)($_POST['id'] ?? 0);
+    $nama     = trim($_POST['nama_sesi']);
+    $paket_id = (int)$_POST['paket_id'];
+    $tgl      = $_POST['tanggal'];
     $jam1  = $_POST['jam_mulai'];
     $jam2  = $_POST['jam_selesai'];
     $dur   = (int)$_POST['durasi_menit'];
@@ -83,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mode  = $_POST['mode'];
 
     if ($id > 0) {
-        $s = $conn->prepare("UPDATE sesi_ujian SET nama_sesi=?,jenis=?,tanggal=?,jam_mulai=?,jam_selesai=?,durasi_menit=?,jumlah_soal=?,mode=? WHERE id=?");
-        $s->bind_param("sssssiisi", $nama,$jenis,$tgl,$jam1,$jam2,$dur,$jml,$mode,$id);
+        $s = $conn->prepare("UPDATE sesi_ujian SET nama_sesi=?,paket_id=?,tanggal=?,jam_mulai=?,jam_selesai=?,durasi_menit=?,jumlah_soal=?,mode=? WHERE id=?");
+        $s->bind_param("sisssiisi", $nama,$paket_id,$tgl,$jam1,$jam2,$dur,$jml,$mode,$id);
         if ($s->execute()) {
             $_SESSION['flash_msg'] = 'Sesi berhasil diperbarui.';
             redirect('/admin/sesi.php');
@@ -92,8 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Gagal memperbarui sesi.';
         }
     } else {
-        $s = $conn->prepare("INSERT INTO sesi_ujian (nama_sesi,jenis,tanggal,jam_mulai,jam_selesai,durasi_menit,jumlah_soal,mode) VALUES (?,?,?,?,?,?,?,?)");
-        $s->bind_param("sssssiis", $nama,$jenis,$tgl,$jam1,$jam2,$dur,$jml,$mode);
+        $s = $conn->prepare("INSERT INTO sesi_ujian (nama_sesi,paket_id,tanggal,jam_mulai,jam_selesai,durasi_menit,jumlah_soal,mode) VALUES (?,?,?,?,?,?,?,?)");
+        $s->bind_param("sisssiis", $nama,$paket_id,$tgl,$jam1,$jam2,$dur,$jml,$mode);
         if ($s->execute()) {
             $_SESSION['flash_msg'] = 'Sesi ujian berhasil dibuat.';
             redirect('/admin/sesi.php');
@@ -105,10 +105,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $show_form = (($_GET['action'] ?? '') === 'tambah' || $edit);
-$list = $conn->query("SELECT * FROM sesi_ujian ORDER BY tanggal DESC, jam_mulai DESC");
+$list = $conn->query("
+    SELECT s.*, pp.nama AS paket_nama
+    FROM sesi_ujian s
+    JOIN paket_program pp ON s.paket_id = pp.id
+    ORDER BY s.tanggal DESC, s.jam_mulai DESC
+");
 
 $admin_page = 'sesi';
-$page_title = 'Sesi Ujian — BBU Tryout';
+$page_title = 'Sesi Ujian';
 $topbar_breadcrumb = 'Sesi Ujian';
 $topbar_title      = 'Kelola Sesi Ujian';
 
@@ -159,9 +164,15 @@ include __DIR__ . '/partials/layout-start.php';
 
             <div>
               <label class="form-label">Program *</label>
-              <select name="jenis" class="form-input">
-                <option value="SOU"   <?= ($edit['jenis'] ?? '') === 'SOU'   ? 'selected' : '' ?>>SOU</option>
-                <option value="GMDSS" <?= ($edit['jenis'] ?? '') === 'GMDSS' ? 'selected' : '' ?>>GMDSS</option>
+              <select name="paket_id" class="form-input">
+                <?php
+                $opt_paket = $conn->query("SELECT id, nama FROM paket_program ORDER BY urutan");
+                while ($op = $opt_paket->fetch_assoc()):
+                ?>
+                <option value="<?= (int)$op['id'] ?>" <?= (int)($edit['paket_id'] ?? 0) === (int)$op['id'] ? 'selected' : '' ?>>
+                  <?= e($op['nama']) ?>
+                </option>
+                <?php endwhile; ?>
               </select>
             </div>
 
@@ -257,7 +268,7 @@ include __DIR__ . '/partials/layout-start.php';
               <span class="badge badge-aktif" style="margin-left:6px;font-size:10px;">Tampil ke peserta</span>
               <?php endif; ?>
             </td>
-            <td><span class="badge badge-<?= strtolower($s['jenis']) ?>"><?= $s['jenis'] ?></span></td>
+            <td><span class="badge badge-paket"><?= e($s['paket_nama']) ?></span></td>
             <td style="font-size:13px;">
               <?= date('d M Y', strtotime($s['tanggal'])) ?><br>
               <span style="color:var(--text-muted);">

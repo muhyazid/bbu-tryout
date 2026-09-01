@@ -10,7 +10,6 @@ if (isset($_SESSION['flash_msg'])) {
     unset($_SESSION['flash_msg']);
 }
 $materi_id = (int) ($_GET['materi'] ?? 0);
-$fj = $_GET['jenis'] ?? '';
 $cari_materi = trim($_GET['cari'] ?? '');
 $cari_soal = trim($_GET['cari_soal'] ?? '');
 
@@ -39,10 +38,9 @@ if (isset($_GET['hapus_kat'])) {
 // ——— Tambah materi ———
 if (isset($_POST['tambah_kategori'])) {
     $nm = trim($_POST['nama_kategori'] ?? '');
-    $jn = $_POST['jenis_kategori'] ?? 'SOU';
     if ($nm !== '') {
-        $s = $conn->prepare('INSERT INTO kategori (nama, jenis) VALUES (?,?)');
-        $s->bind_param('ss', $nm, $jn);
+        $s = $conn->prepare('INSERT INTO kategori (nama) VALUES (?)');
+        $s->bind_param('s', $nm);
         $s->execute();
         $msg = "Materi \"$nm\" berhasil ditambahkan.";
     }
@@ -90,19 +88,17 @@ if (isset($_GET['edit'])) {
 $show_form = (($_GET['action'] ?? '') === 'tambah' || $edit);
 
 // Daftar materi + jumlah soal (dengan filter jenis & pencarian nama)
+// Daftar materi + jumlah soal (dengan pencarian nama)
 $sql_materi = "
     SELECT k.*, COUNT(s.id) AS jumlah_soal
     FROM kategori k
     LEFT JOIN soal s ON s.kategori_id = k.id
     WHERE 1=1
 ";
-if ($fj !== '') {
-    $sql_materi .= " AND k.jenis = '" . $conn->real_escape_string($fj) . "'";
-}
 if ($cari_materi !== '') {
     $sql_materi .= " AND k.nama LIKE '%" . $conn->real_escape_string($cari_materi) . "%'";
 }
-$sql_materi .= ' GROUP BY k.id ORDER BY k.jenis, k.nama';
+$sql_materi .= ' GROUP BY k.id ORDER BY k.nama';
 
 $materi_list = [];
 $res_materi = $conn->query($sql_materi);
@@ -137,8 +133,8 @@ if ($materi_aktif) {
 
 $admin_page = 'soal';
 $page_title = $materi_aktif
-    ? ($materi_aktif['nama'] . ' — Bank Soal')
-    : 'Bank Soal — BBU Tryout';
+    ? ($materi_aktif['nama'] . ' - Bank Soal')
+    : 'Bank Soal';
 
 $topbar_breadcrumb = $materi_aktif
     ? 'Bank Soal / ' . e($materi_aktif['nama'])
@@ -152,10 +148,6 @@ include __DIR__ . '/partials/layout-start.php';
 
     <?php if ($materi_aktif): ?>
 
-    <nav class="breadcrumb" style="margin-bottom:20px;">
-      <a href="soal.php<?= $fj ? '?jenis='.urlencode($fj) : '' ?>">← Kembali ke Bank Soal</a>
-    </nav>
-
     <?php else: ?>
 
     <section class="add-materi-box">
@@ -165,13 +157,6 @@ include __DIR__ . '/partials/layout-start.php';
           <label class="form-label">Nama materi</label>
           <input type="text" name="nama_kategori" class="form-input"
                 placeholder="Contoh: Navigasi Elektronik" required>
-        </div>
-        <div>
-          <label class="form-label">Program</label>
-          <select name="jenis_kategori" class="form-input" style="width:120px;">
-            <option value="SOU">SOU</option>
-            <option value="GMDSS">GMDSS</option>
-          </select>
         </div>
         <div class="add-materi-action">
           <label class="form-label">&nbsp;</label>
@@ -193,16 +178,10 @@ include __DIR__ . '/partials/layout-start.php';
     <?php endif; ?>
 
     <?php if (!$materi_aktif): ?>
+      
     <!-- ═══════════════ LIST MATERI ═══════════════ -->
-
     <div class="soal-filter-row">
-      <div class="filter-group">
-        <a href="soal.php" class="filter-btn <?= !$fj ? 'filter-btn-active' : '' ?>">Semua</a>
-        <a href="soal.php?jenis=SOU" class="filter-btn <?= $fj==='SOU' ? 'filter-btn-active' : '' ?>">SOU</a>
-        <a href="soal.php?jenis=GMDSS" class="filter-btn <?= $fj==='GMDSS' ? 'filter-btn-active' : '' ?>">GMDSS</a>
-      </div>
       <form method="GET" class="soal-search-box">
-        <?php if ($fj): ?><input type="hidden" name="jenis" value="<?= e($fj) ?>"><?php endif; ?>
         <i class="fas fa-search" aria-hidden="true"></i>
         <input type="text" name="cari" placeholder="Cari materi..." value="<?= e($cari_materi) ?>">
       </form>
@@ -217,7 +196,6 @@ include __DIR__ . '/partials/layout-start.php';
       <div class="materi-list">
         <?php foreach ($materi_list as $m): ?>
         <div class="materi-row">
-          <span class="badge badge-<?= strtolower($m['jenis']) ?> materi-row-badge"><?= e($m['jenis']) ?></span>
           <a href="soal.php?materi=<?= (int) $m['id'] ?>" class="materi-row-name"><?= e($m['nama']) ?></a>
           <span class="materi-row-count"><?= (int) $m['jumlah_soal'] ?> soal</span>
           <div class="materi-row-actions">
@@ -260,7 +238,7 @@ include __DIR__ . '/partials/layout-start.php';
           <input type="hidden" name="kategori_id" value="<?= $materi_id ?>">
 
           <p style="margin-bottom:16px;font-size:14px;color:#64748b;">
-            Materi: <strong><?= e($materi_aktif['nama']) ?></strong> (<?= e($materi_aktif['jenis']) ?>)
+            Materi: <strong><?= e($materi_aktif['nama']) ?></strong> 
           </p>
 
           <div style="margin-bottom:16px;">

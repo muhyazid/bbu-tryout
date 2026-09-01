@@ -29,20 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id       = (int)($_POST['id'] ?? 0);
     $nama     = trim($_POST['nama']);
     $nomor    = trim($_POST['nomor_peserta']);
-    $jenis    = $_POST['jenis'];
+    $paket_id = (int)($_POST['paket_id'] ?? 0);
     $angkatan = trim($_POST['angkatan']);
     $pass     = trim($_POST['password']);
 
     if ($id > 0) {
         if ($pass) {
-            // Ada password baru → hash dulu
             $hashed = password_hash($pass, PASSWORD_DEFAULT);
-            $s = $conn->prepare("UPDATE peserta SET nama=?,nomor_peserta=?,jenis=?,angkatan=?,password=? WHERE id=?");
-            $s->bind_param("sssssi", $nama,$nomor,$jenis,$angkatan,$hashed,$id);
+            $s = $conn->prepare("UPDATE peserta SET nama=?,nomor_peserta=?,paket_id=?,angkatan=?,password=? WHERE id=?");
+            $s->bind_param("ssisssi", $nama,$nomor,$paket_id,$angkatan,$hashed,$id);
         } else {
-            // Tidak ada password baru → jangan ubah password
-            $s = $conn->prepare("UPDATE peserta SET nama=?,nomor_peserta=?,jenis=?,angkatan=? WHERE id=?");
-            $s->bind_param("ssssi", $nama,$nomor,$jenis,$angkatan,$id);
+            $s = $conn->prepare("UPDATE peserta SET nama=?,nomor_peserta=?,paket_id=?,angkatan=? WHERE id=?");
+            $s->bind_param("ssisi", $nama,$nomor,$paket_id,$angkatan,$id);
         }
         if ($s->execute()) {
             $_SESSION['flash_msg'] = 'Data peserta berhasil diperbarui.';
@@ -50,12 +48,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_msg'] = 'Gagal memperbarui data peserta.';
         }
     } else {
-        // Tambah peserta baru → hash password
+         // Kalau password kosong → auto-generate
+        if ($pass === '') {
+            $pass = generate_password_acak();
+        }
+        // Tambah peserta baru → hash password UNTUK LOGIN, simpan juga versi asli UNTUK CETAK KARTU
         $hashed = password_hash($pass, PASSWORD_DEFAULT);
-        $s = $conn->prepare("INSERT INTO peserta (nama,nomor_peserta,jenis,angkatan,password) VALUES (?,?,?,?,?)");
-        $s->bind_param("sssss", $nama,$nomor,$jenis,$angkatan,$hashed);
+        $s = $conn->prepare("INSERT INTO peserta (nama,nomor_peserta,paket_id,angkatan,password) VALUES (?,?,?,?,?)");
+        $s->bind_param("ssiss", $nama,$nomor,$paket_id,$angkatan,$hashed);
         if ($s->execute()) {
             $_SESSION['flash_msg'] = 'Peserta berhasil ditambahkan.';
+            $_SESSION['peserta_baru_id'] = $conn->insert_id;
         } else {
             $_SESSION['flash_msg'] = 'Gagal menambahkan peserta. Nomor peserta mungkin sudah digunakan.';
         }
@@ -70,14 +73,24 @@ if (isset($_GET['edit'])) {
 }
 
 $show_form = (($_GET['action'] ?? '') === 'tambah' || $edit);
-$list = $conn->query("SELECT * FROM peserta ORDER BY jenis, nama");
+$list = $conn->query("
+    SELECT p.*, pp.nama AS paket_nama
+    FROM peserta p
+    JOIN paket_program pp ON p.paket_id = pp.id
+    ORDER BY pp.urutan, p.nama
+");
 
 $semua_peserta = [];
-$tmp = $conn->query("SELECT id, nama, nomor_peserta, jenis, angkatan FROM peserta ORDER BY jenis, nama");
+$tmp = $conn->query("
+    SELECT p.id, p.nama, p.nomor_peserta, p.paket_id, p.angkatan, pp.nama AS paket_nama
+    FROM peserta p
+    JOIN paket_program pp ON p.paket_id = pp.id
+    ORDER BY pp.urutan, p.nama
+");
 while ($row = $tmp->fetch_assoc()) $semua_peserta[] = $row;
 
 $admin_page = 'peserta';
-$page_title = 'Kelola Peserta — BBU Tryout';
+$page_title = 'Kelola Peserta';
 $topbar_breadcrumb = 'Peserta';
 $topbar_title      = 'Kelola Peserta';
 
@@ -115,22 +128,33 @@ include __DIR__ . '/partials/layout-start.php';
               </div>
 
               <div>
-                <label class="form-label">Nomor Peserta <span class="required">*</span>
-                  <small>(dipakai untuk login)</small>
-                </label>
-                <div class="input-check-wrap">
-                  <input type="text" name="nomor_peserta" id="field-nomor" class="form-input"
-                        placeholder="Contoh: BBU-001" required autocomplete="off">
-                  <span id="nomor-status" class="nomor-status"></span>
-                </div>
+                  <label class="form-label">Nomor Absen <span class="required">*</span>
+                    <small>(untuk generate username & password otomatis)</small>
+                  </label>
+                  <input type="text" id="field-absen" class="form-input"
+                        placeholder="Contoh: 05" autocomplete="off">
+              </div>
+              <div>
+                  <label class="form-label">Username / Nomor Peserta <span class="required">*</span>
+                    <small>(dipakai untuk login, bisa diedit manual)</small>
+                  </label>
+                  <div class="input-check-wrap">
+                    <input type="text" name="nomor_peserta" id="field-nomor" class="form-input"
+                          placeholder="Otomatis dari nama + absen" required autocomplete="off">
+                    <span id="nomor-status" class="nomor-status"></span>
+                  </div>
               </div>
 
               <div>
-                <label class="form-label">Program <span class="required">*</span></label>
-                <select name="jenis" id="field-jenis" class="form-input">
-                  <option value="SOU">SOU — Ship's Officer Unlimited</option>
-                  <option value="GMDSS">GMDSS — Global Maritime Distress</option>
-                </select>
+                  <label class="form-label">Program <span class="required">*</span></label>
+                  <select name="paket_id" id="field-paket" class="form-input">
+                    <?php
+                    $opt_paket = $conn->query("SELECT id, nama FROM paket_program ORDER BY urutan");
+                    while ($op = $opt_paket->fetch_assoc()):
+                    ?>
+                    <option value="<?= (int)$op['id'] ?>"><?= e($op['nama']) ?></option>
+                    <?php endwhile; ?>
+                  </select>
               </div>
 
               <div>
@@ -146,7 +170,7 @@ include __DIR__ . '/partials/layout-start.php';
                 </label>
                 <div class="input-eye-wrap">
                   <input type="password" name="password" id="field-password" class="form-input"
-                        placeholder="Isi password peserta">
+                        placeholder="Otomatis dari nama lengkap + absen">
                   <button type="button" class="btn-eye" onclick="togglePassword()" title="Tampilkan password">
                     <i class="fas fa-eye" id="eye-icon"></i>
                   </button>
@@ -154,6 +178,10 @@ include __DIR__ . '/partials/layout-start.php';
                 <span class="form-hint">
                   <i class="fas fa-info-circle" style="color:#6b7a99;margin-right:4px;"></i>
                   Saran: nomor peserta atau tanggal lahir (ddmmyyyy)
+                </span>
+                <span class="form-hint">
+                  <i class="fas fa-info-circle" style="color:#6b7a99;margin-right:4px;"></i>
+                  Otomatis: Nama Lengkap + Nomor Absen (contoh: BudiSantoso05). Bisa diedit manual.
                 </span>
               </div>
 
@@ -208,7 +236,7 @@ include __DIR__ . '/partials/layout-start.php';
         document.getElementById('field-id').value       = p.id;
         document.getElementById('field-nama').value     = p.nama;
         document.getElementById('field-nomor').value    = p.nomor_peserta;
-        document.getElementById('field-jenis').value    = p.jenis;
+        document.getElementById('field-paket').value    = p.paket_id;
         document.getElementById('field-angkatan').value = p.angkatan;
       } else {
         editId = null;
@@ -276,6 +304,51 @@ include __DIR__ . '/partials/layout-start.php';
         }
       }, 300);
     });
+
+        // Auto-suggest username & password dari nama + nomor absen
+    document.getElementById('field-nama').addEventListener('input', function() {
+        updateSuggestions();
+    });
+    document.getElementById('field-absen').addEventListener('input', function() {
+        updateSuggestions();
+    });
+
+    function updateSuggestions() {
+        const nama  = document.getElementById('field-nama').value.trim();
+        const absen = document.getElementById('field-absen').value.trim();
+
+        if (!nama || !absen) return;
+
+        const namaDepan   = nama.split(' ')[0];
+        const namaGabung  = nama.replace(/\s+/g, ''); // hapus semua spasi
+        const absenFormat = absen.padStart(2, '0');
+
+        // Username: nama depan + absen (kalau belum diubah manual)
+        const usernameField = document.getElementById('field-nomor');
+        if (!usernameField.dataset.diubahManual) {
+            usernameField.value = namaDepan + absenFormat;
+            // Trigger cek unik yang sudah ada
+            usernameField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        // Password: nama lengkap (tanpa spasi) + absen (kalau belum diubah manual)
+        const passwordField = document.getElementById('field-password');
+        if (!passwordField.dataset.diubahManual) {
+            passwordField.value = namaGabung + absenFormat;
+        }
+    }
+
+    // Tandai kalau kurpel edit manual
+    document.getElementById('field-nomor').addEventListener('input', function(e) {
+    // Hanya tandai "diubah manual" kalau event ini benar-benar dari
+    // ketikan asli pengguna, BUKAN dari dispatchEvent otomatis sistem
+    if (e.isTrusted) {
+            this.dataset.diubahManual = 'true';
+        }
+    });
+    document.getElementById('field-password').addEventListener('input', function() {
+        this.dataset.diubahManual = 'true';
+    });
     </script>
 
     <!-- TABEL PESERTA -->
@@ -309,7 +382,7 @@ include __DIR__ . '/partials/layout-start.php';
                 <?= htmlspecialchars($p['nomor_peserta']) ?>
               </code>
             </td>
-            <td><span class="badge badge-<?= strtolower($p['jenis']) ?>"><?= $p['jenis'] ?></span></td>
+            <td><span class="badge badge-paket"><?= e($p['paket_nama']) ?></span></td>
             <td style="color:var(--text-muted);font-size:13px;"><?= htmlspecialchars($p['angkatan'] ?: '—') ?></td>
             <td>
               <div class="action-buttons">
@@ -339,4 +412,5 @@ include __DIR__ . '/partials/layout-start.php';
       <?php endif; ?>
     </div>
 
+    
 <?php include __DIR__ . '/partials/layout-end.php'; ?>

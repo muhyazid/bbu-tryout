@@ -1,0 +1,235 @@
+/* ============================================================
+   BBU Tryout — review.css
+   Halaman review jawaban (mirip Google Form quiz review)
+   ============================================================ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body.review-page {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: #F1F5F9;
+  color: #0F172A;
+  font-size: 14px;
+}
+
+/* ─── HEADER ─────────────────────────────────────────────── */
+.review-header {
+  background: #0F1E3C;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.review-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+.review-subtitle {
+  color: rgba(255,255,255,0.5);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+.review-header-right { text-align: right; }
+.review-peserta-nama {
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.review-peserta-info {
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ─── CONTENT WRAPPER ────────────────────────────────────── */
+.review-content {
+  max-width: 720px;
+  margin: 24px auto 60px;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── RINGKASAN SKOR — MODE 1 MATERI (COC GMDSS) ────────── */
+.review-summary-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 24px;
+  text-align: center;
+  border: 2px solid;
+}
+.review-summary-card.skor-tinggi { border-color: #86EFAC; background: #F0FDF4; }
+.review-summary-card.skor-rendah { border-color: #FCA5A5; background: #FEF2F2; }
+
+.summary-score {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+  color: #0F172A;
+}
+.summary-label {
+  font-size: 12.5px;
+  color: #64748B;
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.summary-detail {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: 10px;
+}
+
+/* ─── SECTION PER MATERI (daftar soal) ──────────────────── */
+.review-materi-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.review-materi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #E2E8F0;
+  margin-top: 8px;
+}
+
+.review-materi-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F1E3C;
+}
+
+.review-materi-nilai {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.review-materi-nilai.nilai-tinggi {
+  background: #F0FDF4;
+  color: #166534;
+}
+.review-materi-nilai.nilai-rendah {
+  background: #FEF2F2;
+  color: #991B1B;
+}
+
+/* ─── SOAL CARD ──────────────────────────────────────────── */
+.review-soal-card {
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+.review-soal-num {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+.review-soal-text {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #0F172A;
+  font-weight: 500;
+  margin-bottom: 14px;
+}
+
+/* ─── PILIHAN JAWABAN (mode review) ─────────────────────── */
+.review-jwb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.review-jwb-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 7px;
+  font-size: 13px;
+  color: #475569;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+/* Kunci jawaban yang benar — selalu hijau */
+.review-jwb-opt.opt-kunci {
+  border-color: #86EFAC;
+  background: #F0FDF4;
+  color: #166534;
+  font-weight: 600;
+}
+
+/* Jawaban peserta yang SALAH — merah (hanya kalau bukan kunci) */
+.review-jwb-opt.opt-salah-dipilih {
+  border-color: #FCA5A5;
+  background: #FEF2F2;
+  color: #991B1B;
+  font-weight: 600;
+}
+
+.review-jwb-letter {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  flex-shrink: 0;
+}
+.opt-kunci .review-jwb-letter { background: #059669; color: #fff; }
+.opt-salah-dipilih .review-jwb-letter { background: #DC2626; color: #fff; }
+
+.review-jwb-text { flex: 1; min-width: 0; }
+
+.review-jwb-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.tag-kunci { background: #059669; color: #fff; }
+.tag-dipilih { background: #DC2626; color: #fff; }
+
+.review-tidak-dijawab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #92400E;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  padding: 8px 12px;
+  border-radius: 7px;
+  margin-top: 4px;
+}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .review-header { flex-direction: column; align-items: flex-start; }
+  .review-header-right { text-align: left; }
+  .review-jwb-opt { flex-wrap: wrap; }
+}

@@ -41,7 +41,7 @@ $peserta_opt = $conn->query("SELECT id, nama, nomor_peserta FROM peserta ORDER B
 $sesi_opt    = $conn->query("SELECT id, nama_sesi FROM sesi_ujian ORDER BY tanggal DESC");
 
 $admin_page = 'log';
-$page_title = 'Log Aktivitas — BBU Tryout';
+$page_title = 'Log Aktivitas';
 
 $log_labels = [
     'pindah_tab'        => 'Pindah tab',

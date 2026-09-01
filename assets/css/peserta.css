@@ -726,6 +726,13 @@ body.peserta-page{ overflow-y: auto; }
   box-shadow: var(--shadow-sm);
 }
 
+.status-card--paused {
+  text-align: center;
+  padding: 32px 24px;
+  border-color: #FDE68A;
+  background: #FFFBEB;
+}
+
 /* Variant: ujian aktif */
 .status-card--active {
   border-color: #BFDBFE;
@@ -945,6 +952,11 @@ body.peserta-page{ overflow-y: auto; }
   margin-right: 4px;
 }
 
+.tag--paket {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
 .tag--sou    { background: #EFF6FF; color: #1D4ED8; }
 .tag--gmdss  { background: #F0FDF4; color: #166534; }
 .tag--ujian  { background: #FEF2F2; color: #991B1B; }
@@ -1022,3 +1034,4 @@ body.peserta-page{ overflow-y: auto; }
     margin-bottom: 2px;
   }
 }
+

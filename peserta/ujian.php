@@ -140,8 +140,15 @@ $soal_ids     = $_SESSION[$skey]['ids'];
 $mapel_map    = $_SESSION[$skey]['mapel_map'];
 $mapel_ranges = $_SESSION[$skey]['mapel_ranges'];
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
+    // Cegah replay/double-submit: tolak kalau status sudah 'selesai'
+    if ($hasil_existing && $hasil_existing['status_pengerjaan'] === 'selesai') {
+        redirect('/peserta/dashboard.php');
+    }
 
+    $total = count($soal_ids);
 
+}
 // ── HANDLE SUBMIT ─────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
     $total = count($soal_ids);
@@ -678,6 +685,11 @@ function pilihJawaban(soalId, opt) {
 
     // Auto-save jawaban ke server (tidak menunggu submit akhir)
     simpanJawabanKeServer(soalId, opt);
+
+    // Auto-advance ke soal berikutnya, KECUALI sudah di soal terakhir
+    if (cardNo > 0 && cardNo < TOTAL_SOAL) {
+        tampilSoal(cardNo + 1);
+    }
 }
 
 function simpanJawabanKeServer(soalId, jawaban) {

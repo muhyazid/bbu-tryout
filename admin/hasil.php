@@ -13,11 +13,12 @@ if ($fs)  $where .= " AND h.sesi_id="  . $fs;
 if ($fna) $where .= " AND p.nama LIKE '%" . $conn->real_escape_string($fna) . "%'";
 
 $hasil = $conn->query("
-    SELECT h.*, p.nama, p.nomor_peserta, p.jenis as p_jenis,
-           s.nama_sesi, s.jenis as s_jenis, s.mode
+    SELECT h.*, p.nama, p.nomor_peserta,
+           s.nama_sesi, s.mode, pp.nama AS paket_nama
     FROM hasil_ujian h
     JOIN peserta p    ON h.peserta_id = p.id
     JOIN sesi_ujian s ON h.sesi_id    = s.id
+    JOIN paket_program pp ON s.paket_id = pp.id
     $where
     ORDER BY h.submitted_at DESC
 ");
@@ -40,6 +41,7 @@ $stat = $conn->query("
         SUM(skor >= 70) as lulus
     FROM hasil_ujian h
     JOIN sesi_ujian s ON h.sesi_id = s.id
+    JOIN peserta p    ON h.peserta_id = p.id
     $where
 ")->fetch_assoc();
 
@@ -53,33 +55,25 @@ include __DIR__ . '/partials/layout-start.php';
 
     <!-- STAT RINGKAS -->
     <?php if ($stat['total'] > 0): ?>
-    <div class="stat-grid" style="margin-bottom:20px;">
-      <div class="stat-card">
-        <div class="stat-icon"><?= admin_icon('file') ?></div>
-        <div class="stat-info">
-          <h3><?= $stat['total'] ?></h3>
-          <p>Total Ujian</p>
+    <div class="rekap-stat-grid">
+      <div class="rekap-stat-card">
+        <div class="rekap-stat-icon rekap-stat-icon--success">
+          <i class="fas fa-trophy"></i>
+        </div>
+        <div>
+          <div class="rekap-stat-value"><?= (int)$stat['tertinggi'] ?></div>
+          <div class="rekap-stat-label">Nilai tertinggi</div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon"><?= admin_icon('chart') ?></div>
-        <div class="stat-info">
-          <h3><?= $stat['rata'] ?></h3>
-          <p>Rata-rata Nilai</p>
+      <div class="rekap-stat-card">
+        <div class="rekap-stat-icon rekap-stat-icon--accent">
+          <i class="fas fa-bullseye"></i>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon"><?= admin_icon('hasil') ?></div>
-        <div class="stat-info">
-          <h3><?= $stat['tertinggi'] ?></h3>
-          <p>Nilai Tertinggi</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon"><?= admin_icon('users') ?></div>
-        <div class="stat-info">
-          <h3><?= $stat['lulus'] ?> / <?= $stat['total'] ?></h3>
-          <p>Lulus (≥70)</p>
+        <div>
+          <div class="rekap-stat-value">
+            <?= (int)$stat['lulus'] ?> <span>/ <?= (int)$stat['total'] ?></span>
+          </div>
+          <div class="rekap-stat-label">Di atas KKM (70)</div>
         </div>
       </div>
     </div>
@@ -154,6 +148,7 @@ include __DIR__ . '/partials/layout-start.php';
             <th style="text-align:center;">Status</th>
             <th>Waktu</th>
             <th>Tanggal</th>
+            <th>Review</th>
           </tr>
         </thead>
         <tbody>
@@ -176,7 +171,7 @@ include __DIR__ . '/partials/layout-start.php';
             </td>
             <td>
               <div style="font-size:13px;font-weight:500;"><?= htmlspecialchars($r['nama_sesi']) ?></div>
-              <span class="badge badge-<?= strtolower($r['s_jenis']) ?>"><?= $r['s_jenis'] ?></span>
+              <span class="badge badge-paket"><?= e($r['paket_nama']) ?></span>
               <span class="badge badge-<?= $r['mode'] ?>"><?= ucfirst($r['mode']) ?></span>
             </td>
             <td style="text-align:center;">
@@ -203,7 +198,6 @@ include __DIR__ . '/partials/layout-start.php';
               <?= date('d M Y', strtotime($r['submitted_at'])) ?><br>
               <?= date('H:i', strtotime($r['submitted_at'])) ?>
             </td>
-            <th>Review</th>
             <td>
                 <a href="<?= url('/review.php?hasil_id=' . $r['id']) ?>" target="_blank" class="btn-icon" data-tooltip="Lihat review jawaban">
                     <i class="fas fa-eye"></i>

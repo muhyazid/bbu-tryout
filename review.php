@@ -37,6 +37,11 @@ if (!$hasil) {
 if ($is_peserta && (int)$hasil['peserta_id'] !== (int)$_SESSION['peserta_id']) {
     redirect('/peserta/dashboard.php');
 }
+// Kalau yang akses peserta, pastikan ujian ini SUDAH SELESAI (bukan sedang berjalan/dijeda)
+// Ini mencegah peserta melihat kunci jawaban sebelum ujian benar-benar tuntas
+if ($is_peserta && $hasil['status_pengerjaan'] !== 'selesai') {
+    redirect('/peserta/dashboard.php');
+}
 
 // ── AMBIL JUMLAH MATERI UNTUK PAKET INI ─────────────────────
 // Kalau paket cuma punya 1 materi (misal COC GMDSS) → tampilkan sebagai 1 nilai total

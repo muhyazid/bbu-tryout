@@ -795,3 +795,21 @@ body {
   margin-bottom: 20px;
   font-style: italic;
 }
+
+/* ============================================================
+   TAMBAHAN — Section label pengelompokan menu sidebar
+   ============================================================ */
+
+.nav-section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 16px 10px 6px;
+  white-space: nowrap;
+}
+
+.nav-section-label:first-of-type {
+  padding-top: 12px;
+}

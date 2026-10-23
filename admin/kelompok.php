@@ -198,22 +198,31 @@ include __DIR__ . '/partials/layout-start.php';
     <div class="alert alert-error"><?= e($error) ?></div>
     <?php endif; ?>
 
-    <div style="margin-bottom:16px;font-size:13px;color:var(--text-secondary);line-height:1.6;">
-      Buat kelompok untuk membagi peserta yang ujian bergantian (misal karena keterbatasan
-      tempat/laptop). Jeda kelompok akan menghentikan sementara waktu ujian mereka dan
-      otomatis logout — waktu tersisa akan tetap sama saat dilanjutkan.
+    <div class="pk-hero">
+      <div class="pk-hero-teks">
+        <h2>Kelola Kelompok</h2>
+        <p>Bagi peserta yang ujian bergantian. Jeda kelompok menghentikan sementara waktu ujiannya, dan waktu tersisa tetap utuh saat dilanjutkan.</p>
+      </div>
     </div>
 
-    <!-- PILIH ANGKATAN -->
     <?php if (count($daftar_angkatan) > 0): ?>
-    <div class="filter-group" style="margin-bottom:20px;">
-      <?php foreach ($daftar_angkatan as $ang): ?>
-      <a href="kelompok.php?angkatan=<?= urlencode($ang) ?>"
-         class="filter-btn <?= $angkatan_aktif === $ang ? 'filter-btn-active' : '' ?>">
-        <?= e($ang) ?>
+    <nav class="pk-tabs" aria-label="Pilih angkatan">
+      <?php foreach ($daftar_angkatan as $ang):
+          $aktif   = $angkatan_aktif === $ang;
+          $inisial = mb_strtoupper(mb_substr(trim($ang), 0, 2));
+          $warna   = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777'][crc32($ang) % 6];
+      ?>
+      <a href="<?= url('/admin/kelompok.php?angkatan=' . urlencode($ang)) ?>"
+         class="pk-tab<?= $aktif ? ' aktif' : '' ?>"
+         <?= $aktif ? 'aria-current="page"' : '' ?>>
+        <span class="pk-avatar" style="--warna: <?= $warna ?>"><?= e($inisial) ?></span>
+        <span class="pk-tab-teks">
+          <span class="pk-tab-nama"><?= e($ang) ?></span>
+          <span class="pk-tab-info">Angkatan</span>
+        </span>
       </a>
       <?php endforeach; ?>
-    </div>
+    </nav>
     <?php else: ?>
     <div class="empty-state">
       <p><strong>Belum ada data angkatan</strong></p>
@@ -223,69 +232,57 @@ include __DIR__ . '/partials/layout-start.php';
 
     <?php if ($angkatan_aktif): ?>
 
-    <!-- FORM TAMBAH KELOMPOK -->
-    <section class="add-materi-box">
-      <h4>Buat kelompok baru untuk <?= e($angkatan_aktif) ?></h4>
-      <form method="POST" class="add-materi-form">
-        <input type="hidden" name="angkatan" value="<?= e($angkatan_aktif) ?>">
-        <div>
-          <label class="form-label">Nama kelompok</label>
-          <input type="text" name="nama_kelompok" class="form-input"
-                placeholder="Contoh: Kelompok A" required>
-        </div>
-        <div class="add-materi-action">
-          <label class="form-label">&nbsp;</label>
-          <button type="submit" name="tambah_kelompok" class="btn-admin-primary">
-            <i class="fas fa-plus" style="font-size:12px;"></i> Buat kelompok
-          </button>
-        </div>
-      </form>
-    </section>
-
-    <!-- DAFTAR KELOMPOK -->
-    <div class="card" style="margin-bottom:20px;">
-      <div class="card-header">
-        <h3>Kelompok di <?= e($angkatan_aktif) ?></h3>
+    <form method="POST" class="ps-buat" autocomplete="off">
+      <input type="hidden" name="angkatan" value="<?= e($angkatan_aktif) ?>">
+      <div class="ps-buat-input">
+        <i class="fas fa-users" aria-hidden="true"></i>
+        <input type="text" name="nama_kelompok" placeholder="Nama kelompok baru, contoh: Kelompok A" required>
       </div>
+      <button type="submit" name="tambah_kelompok" class="btn-admin-primary pk-btn">
+        <i class="fas fa-plus"></i> Buat kelompok
+      </button>
+    </form>
 
-      <?php if (count($daftar_kelompok) > 0): ?>
-      <div class="materi-list">
-        <?php foreach ($daftar_kelompok as $kel): ?>
-        <div class="materi-row">
-          <span class="badge <?= $kel['status'] === 'berjalan' ? 'badge-aktif' : 'badge-nonaktif' ?>" style="width:80px;text-align:center;justify-content:center;">
-            <?= $kel['status'] === 'berjalan' ? '● Berjalan' : '○ Dijeda' ?>
+    <?php if (count($daftar_kelompok) > 0): ?>
+    <ul class="ps-list">
+      <?php foreach ($daftar_kelompok as $kel):
+          $berjalan = $kel['status'] === 'berjalan';
+      ?>
+      <li class="ps-row">
+        <div class="ps-row-link ps-row-statis">
+          <span class="kl-status <?= $berjalan ? 'berjalan' : 'dijeda' ?>">
+            <span class="kl-titik"></span><?= $berjalan ? 'Berjalan' : 'Dijeda' ?>
           </span>
-          <span class="materi-row-name" style="cursor:default;"><?= e($kel['nama_kelompok']) ?></span>
-          <span class="materi-row-count"><?= $kel['jumlah_anggota'] ?> peserta</span>
-          <div class="materi-row-actions">
-            <a href="kelompok.php?angkatan=<?= urlencode($angkatan_aktif) ?>&edit_anggota=<?= (int)$kel['id'] ?>"
-               class="btn-icon" data-tooltip="Kelola anggota">
-              <i class="fas fa-users"></i>
-            </a>
-            <a href="#"
-               class="btn-icon"
-               data-tooltip="<?= $kel['status'] === 'berjalan' ? 'Jeda kelompok' : 'Lanjutkan kelompok' ?>"
-               onclick="konfirmasiToggleKelompok(<?= (int)$kel['id'] ?>, '<?= $kel['status'] === 'berjalan' ? 'dijeda' : 'berjalan' ?>', '<?= htmlspecialchars(addslashes($kel['nama_kelompok'])) ?>', <?= $kel['jumlah_anggota'] ?>); return false;">
-              <i class="fas <?= $kel['status'] === 'berjalan' ? 'fa-pause' : 'fa-play' ?>"></i>
-            </a>
-            <a href="#"
-               class="btn-icon btn-icon-delete" data-tooltip="Hapus kelompok"
-               onclick="if(confirm('Hapus kelompok ini?')) window.location='kelompok.php?hapus=<?= (int)$kel['id'] ?>'; return false;">
-              <i class="fas fa-trash"></i>
-            </a>
-          </div>
+          <span class="ps-info">
+            <span class="ps-nama"><?= e($kel['nama_kelompok']) ?></span>
+            <span class="ps-meta"><?= (int) $kel['jumlah_anggota'] ?> peserta</span>
+          </span>
         </div>
-        <?php endforeach; ?>
-      </div>
-      <?php else: ?>
-      <div class="empty-state">
-        <p><strong>Belum ada kelompok</strong></p>
-        <p>Buat kelompok di atas jika ujian perlu dibagi bergantian. Jika tidak, biarkan kosong — semua peserta bisa ujian bersamaan tanpa perlu kelompok.</p>
-      </div>
-      <?php endif; ?>
+        <div class="ps-aksi">
+          <a class="ps-ikon" href="<?= url('/admin/kelompok.php?angkatan=' . urlencode($angkatan_aktif) . '&edit_anggota=' . (int) $kel['id']) ?>"
+             title="Kelola anggota">
+            <i class="fas fa-users"></i>
+          </a>
+          <a href="#" class="ps-ikon <?= $berjalan ? '' : 'ps-ikon-aktif' ?>"
+             title="<?= $berjalan ? 'Jeda kelompok' : 'Lanjutkan kelompok' ?>"
+             onclick="konfirmasiToggleKelompok(<?= (int) $kel['id'] ?>, '<?= $berjalan ? 'dijeda' : 'berjalan' ?>', '<?= htmlspecialchars(addslashes($kel['nama_kelompok'])) ?>', <?= (int) $kel['jumlah_anggota'] ?>); return false;">
+            <i class="fas <?= $berjalan ? 'fa-pause' : 'fa-play' ?>"></i>
+          </a>
+          <a href="#" class="ps-ikon ps-ikon-hapus" title="Hapus kelompok"
+             onclick="if(confirm('Hapus kelompok ini?')) window.location='<?= url('/admin/kelompok.php?hapus=' . (int) $kel['id']) ?>'; return false;">
+            <i class="fas fa-trash"></i>
+          </a>
+        </div>
+      </li>
+      <?php endforeach; ?>
+    </ul>
+    <?php else: ?>
+    <div class="empty-state">
+      <p><strong>Belum ada kelompok di angkatan ini</strong></p>
+      <p>Buat kelompok di atas jika ujian perlu dibagi bergantian. Jika tidak, biarkan kosong, semua peserta bisa ujian bersamaan.</p>
     </div>
+    <?php endif; ?>
 
-    <!-- FORM ASSIGN ANGGOTA (muncul kalau ada kelompok yang sedang di-edit) -->
     <?php
     $kelompok_diedit = null;
     foreach ($daftar_kelompok as $kel) {
@@ -293,34 +290,49 @@ include __DIR__ . '/partials/layout-start.php';
     }
     ?>
     <?php if ($kelompok_diedit): ?>
-    <div class="card">
-      <div class="card-header">
-        <h3>Anggota — <?= e($kelompok_diedit['nama_kelompok']) ?></h3>
-        <a href="kelompok.php?angkatan=<?= urlencode($angkatan_aktif) ?>" class="link-muted">Tutup</a>
-      </div>
+    <section class="pk-panel kl-anggota">
+      <header class="pk-panel-head">
+        <div class="pk-panel-judul">
+          <h2>Anggota <?= e($kelompok_diedit['nama_kelompok']) ?></h2>
+          <p>Centang peserta yang masuk kelompok ini. Peserta yang sudah ada di kelompok lain tidak bisa dipilih.</p>
+        </div>
+        <a href="<?= url('/admin/kelompok.php?angkatan=' . urlencode($angkatan_aktif)) ?>" class="ps-tutup">Tutup</a>
+      </header>
 
       <?php if (count($semua_peserta_angkatan) > 0): ?>
       <form method="POST">
         <input type="hidden" name="kelompok_id" value="<?= $edit_kelompok_id ?>">
-        <div class="paket-checklist">
+        <ul class="ps-list kl-pilih-list">
           <?php foreach ($semua_peserta_angkatan as $p):
-              $sudah_di_lain = isset($sudah_masuk_kelompok[$p['id']]) && !in_array((int)$p['id'], $anggota_terpilih);
+              $terpilih_di_sini = in_array((int)$p['id'], $anggota_terpilih);
+              $sudah_di_lain    = isset($sudah_masuk_kelompok[$p['id']]) && !$terpilih_di_sini;
+              $inisial          = mb_strtoupper(mb_substr(trim($p['nama']), 0, 2));
+              $warna            = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777'][(int) $p['id'] % 6];
           ?>
-          <label class="paket-check-row" style="<?= $sudah_di_lain ? 'opacity:0.5;' : '' ?>">
-            <input type="checkbox" name="peserta[]" value="<?= (int)$p['id'] ?>"
-                   <?= in_array((int)$p['id'], $anggota_terpilih) ? 'checked' : '' ?>
-                   <?= $sudah_di_lain ? 'disabled' : '' ?>>
-            <span class="paket-check-name">
-              <?= e($p['nama']) ?> <code style="font-size:11px;color:var(--text-muted);">(<?= e($p['nomor_peserta']) ?>)</code>
-              <?php if ($sudah_di_lain): ?>
-              <span style="color:var(--text-muted);font-size:11px;"> — sudah di <?= e($sudah_masuk_kelompok[$p['id']]) ?></span>
-              <?php endif; ?>
-            </span>
-          </label>
+          <li class="ps-row kl-pilih<?= $sudah_di_lain ? ' kl-terkunci' : '' ?>">
+            <label class="ps-row-link kl-pilih-label">
+              <input type="checkbox" class="kl-check" name="peserta[]" value="<?= (int)$p['id'] ?>"
+                     <?= $terpilih_di_sini ? 'checked' : '' ?>
+                     <?= $sudah_di_lain ? 'disabled' : '' ?>>
+              <span class="pk-avatar" style="--warna: <?= $warna ?>"><?= e($inisial) ?></span>
+              <span class="ps-info">
+                <span class="ps-nama"><?= e($p['nama']) ?></span>
+                <span class="ps-chips">
+                  <span class="ps-chip ps-chip-nomor"><?= e($p['nomor_peserta']) ?></span>
+                  <?php if ($sudah_di_lain): ?>
+                  <span class="ps-chip kl-chip-lain">Sudah di <?= e($sudah_masuk_kelompok[$p['id']]) ?></span>
+                  <?php endif; ?>
+                </span>
+              </span>
+            </label>
+          </li>
           <?php endforeach; ?>
-        </div>
-        <div class="card-body" style="border-top:1px solid var(--border);padding-top:16px;">
-          <button type="submit" name="simpan_anggota" class="btn-primary">Simpan anggota</button>
+        </ul>
+
+        <div class="kl-simpan">
+          <button type="submit" name="simpan_anggota" class="btn-admin-primary pk-btn">
+            <i class="fas fa-check"></i> Simpan anggota
+          </button>
         </div>
       </form>
       <?php else: ?>
@@ -328,7 +340,7 @@ include __DIR__ . '/partials/layout-start.php';
         <p><strong>Belum ada peserta di angkatan ini</strong></p>
       </div>
       <?php endif; ?>
-    </div>
+    </section>
     <?php endif; ?>
 
     <?php endif; ?>

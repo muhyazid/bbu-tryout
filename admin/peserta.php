@@ -169,6 +169,7 @@ $topbar_title      = $angkatan_aktif !== null
 
 include __DIR__ . '/partials/layout-start.php';
 ?>
+
     <?php if ($msg): ?>
     <div class="alert alert-success"><?= e($msg) ?></div>
     <?php endif; ?>
@@ -180,79 +181,87 @@ include __DIR__ . '/partials/layout-start.php';
     <?php if ($angkatan_aktif === null): ?>
     <!-- ═══════════════ LEVEL 1: DAFTAR ANGKATAN ═══════════════ -->
 
-    <section class="add-materi-box">
-      <h4>Buat angkatan / periode baru</h4>
-      <form method="POST" class="add-materi-form">
-        <div>
-          <label class="form-label">Nama angkatan</label>
-          <input type="text" name="nama_angkatan" class="form-input"
-                placeholder="Contoh: Angkatan 2026-III" required>
-        </div>
-        <div class="add-materi-action">
-          <label class="form-label">&nbsp;</label>
-          <button type="submit" name="buat_angkatan" class="btn-admin-primary">
-            <i class="fas fa-plus" style="font-size:12px;"></i> Buat angkatan
-          </button>
-        </div>
-      </form>
-    </section>
-
-    <div class="card">
-      <div class="card-header">
-        <h3>Daftar angkatan / periode</h3>
+    <div class="pk-hero">
+      <div class="pk-hero-teks">
+        <h2>Kelola Peserta</h2>
+        <p>Peserta dikelompokkan per angkatan. Pilih angkatan untuk melihat dan mengelola pesertanya.</p>
       </div>
-
-      <?php if (count($daftar_angkatan) > 0 || $tanpa_angkatan > 0): ?>
-      <div class="materi-list">
-        <?php foreach ($daftar_angkatan as $ang): ?>
-        <div class="materi-row">
-          <a href="peserta.php?angkatan=<?= urlencode($ang['angkatan']) ?>" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
-            <span class="materi-row-name"><?= e($ang['angkatan']) ?></span>
-            <span class="materi-row-count"><?= (int)$ang['jumlah'] ?> peserta</span>
-          </a>
-          <div class="materi-row-actions">
-            <?php if ((int)$ang['jumlah'] === 0): ?>
-            <a href="#"
-              class="btn-icon btn-icon-delete" data-tooltip="Hapus angkatan"
-              onclick="if(confirm('Hapus angkatan \'<?= e($ang['angkatan']) ?>\'?')) window.location='peserta.php?hapus_angkatan=<?= urlencode($ang['angkatan']) ?>'; return false;">
-              <i class="fas fa-trash"></i>
-            </a>
-            <?php else: ?>
-            <span class="btn-icon" data-tooltip="Tidak bisa hapus, masih ada peserta" style="opacity:0.3;cursor:not-allowed;">
-              <i class="fas fa-trash"></i>
-            </span>
-            <?php endif; ?>
-            <a href="peserta.php?angkatan=<?= urlencode($ang['angkatan']) ?>" class="btn-icon" style="pointer-events:none;">
-              <i class="fas fa-chevron-right"></i>
-            </a>
-          </div>
-        </div>
-        <?php endforeach; ?>
-
-        <?php if ($tanpa_angkatan > 0): ?>
-        <a href="peserta.php?angkatan=__tanpa_angkatan__" class="materi-row" style="text-decoration:none;color:inherit;">
-          <span class="materi-row-name" style="color:var(--text-muted);">Tanpa angkatan</span>
-          <span class="materi-row-count"><?= (int)$tanpa_angkatan ?> peserta</span>
-          <div class="materi-row-actions">
-            <span class="btn-icon" style="pointer-events:none;"><i class="fas fa-chevron-right"></i></span>
-          </div>
-        </a>
-        <?php endif; ?>
-      </div>
-      <?php else: ?>
-      <div class="empty-state">
-        <p><strong>Belum ada data peserta</strong></p>
-        <p>Peserta akan otomatis dikelompokkan berdasarkan Angkatan setelah ditambahkan.</p>
-      </div>
-      <?php endif; ?>
     </div>
 
-    <?php else: ?>
-    <!-- ═══════════════ LEVEL 2: DAFTAR PESERTA DALAM ANGKATAN ═══════════════ -->
+    <form method="POST" class="ps-buat" autocomplete="off">
+      <div class="ps-buat-input">
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        <input type="text" name="nama_angkatan" placeholder="Nama angkatan baru, contoh: Angkatan 2026-III" required>
+      </div>
+      <button type="submit" name="buat_angkatan" class="btn-admin-primary pk-btn">
+        <i class="fas fa-plus"></i> Buat angkatan
+      </button>
+    </form>
 
-    <nav class="breadcrumb" style="margin-bottom:20px;">
-      <a href="peserta.php">← Kembali ke daftar angkatan</a>
-    </nav>
+    <?php if (count($daftar_angkatan) > 0 || $tanpa_angkatan > 0): ?>
+    <ul class="ps-list">
+      <?php foreach ($daftar_angkatan as $ang):
+          $jml     = (int) $ang['jumlah'];
+          $inisial = mb_strtoupper(mb_substr(trim($ang['angkatan']), 0, 2));
+          $warna   = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777'][crc32($ang['angkatan']) % 6];
+      ?>
+      <li class="ps-row">
+        <a class="ps-row-link" href="<?= url('/admin/peserta.php?angkatan=' . urlencode($ang['angkatan'])) ?>">
+          <span class="pk-avatar" style="--warna: <?= $warna ?>"><?= e($inisial) ?></span>
+          <span class="ps-info">
+            <span class="ps-nama"><?= e($ang['angkatan']) ?></span>
+            <span class="ps-meta"><?= $jml ?> peserta</span>
+          </span>
+          <i class="fas fa-chevron-right ps-panah" aria-hidden="true"></i>
+        </a>
+        <?php if ($jml === 0): ?>
+        <a class="ps-hapus" title="Hapus angkatan"
+           href="<?= url('/admin/peserta.php?hapus_angkatan=' . urlencode($ang['angkatan'])) ?>"
+           onclick="return confirm('Hapus angkatan <?= e(addslashes($ang['angkatan'])) ?>?')">
+          <i class="fas fa-trash"></i>
+        </a>
+        <?php else: ?>
+        <span class="ps-hapus ps-hapus-off" title="Kosongkan peserta terlebih dahulu">
+          <i class="fas fa-lock"></i>
+        </span>
+        <?php endif; ?>
+      </li>
+      <?php endforeach; ?>
+
+      <?php if ($tanpa_angkatan > 0): ?>
+      <li class="ps-row">
+        <a class="ps-row-link" href="<?= url('/admin/peserta.php?angkatan=__tanpa_angkatan__') ?>">
+          <span class="pk-avatar" style="--warna: #94A3B8">?</span>
+          <span class="ps-info">
+            <span class="ps-nama">Tanpa angkatan</span>
+            <span class="ps-meta"><?= (int) $tanpa_angkatan ?> peserta</span>
+          </span>
+          <i class="fas fa-chevron-right ps-panah" aria-hidden="true"></i>
+        </a>
+      </li>
+      <?php endif; ?>
+    </ul>
+    <?php else: ?>
+    <div class="empty-state">
+      <p><strong>Belum ada angkatan</strong></p>
+      <p>Buat angkatan pertama di atas, lalu tambahkan pesertanya.</p>
+    </div>
+    <?php endif; ?>
+
+    <?php else: ?>
+    <!-- ═══════════════ LEVEL 2: PESERTA DALAM ANGKATAN ═══════════════ -->
+
+    <a class="ps-kembali" href="<?= url('/admin/peserta.php') ?>">← Semua angkatan</a>
+
+    <div class="pk-hero">
+      <div class="pk-hero-teks">
+        <h2><?= $angkatan_aktif === '__tanpa_angkatan__' ? 'Tanpa angkatan' : e($angkatan_aktif) ?></h2>
+        <p><?= count($semua_peserta) ?> peserta terdaftar</p>
+      </div>
+      <button type="button" class="ps-tambah" onclick="bukaModal()">
+        <i class="fas fa-plus"></i> Tambah peserta
+      </button>
+    </div>
 
     <!-- MODAL PESERTA -->
     <div id="modal-peserta" class="modal-overlay">
@@ -492,64 +501,42 @@ include __DIR__ . '/partials/layout-start.php';
     });
     </script>
 
-    <!-- TABEL PESERTA -->
-    <div class="card">
-      <div class="card-header">
-        <h3>Daftar peserta — <?= $angkatan_aktif === '__tanpa_angkatan__' ? 'Tanpa Angkatan' : e($angkatan_aktif) ?></h3>
-        <button onclick="bukaModal()" class="btn-admin-primary btn-sm">
-          <?= admin_icon('plus') ?> Tambah peserta
-        </button>
-      </div>
-
-      <?php if ($list && $list->num_rows > 0): ?>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Nama</th>
-            <th>Nomor Peserta</th>
-            <th>Program</th>
-            <th style="width:120px;">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-        <?php $no=1; while ($p = $list->fetch_assoc()): ?>
-          <tr>
-            <td style="color:var(--text-muted);"><?= $no++ ?></td>
-            <td style="font-weight:500;font-size:15px;"><?= e($p['nama']) ?></td>
-            <td>
-              <code style="background:#f0f2f5;padding:3px 10px;border-radius:6px;font-size:13px;">
-                <?= e($p['nomor_peserta']) ?>
-              </code>
-            </td>
-            <td><span class="badge badge-paket"><?= e($p['paket_nama']) ?></span></td>
-            <td>
-              <div class="action-buttons">
-                <a onclick="bukaModal(<?= $p['id'] ?>)"
-                  class="btn-icon btn-icon-edit"
-                  data-tooltip="Edit peserta"
-                  style="cursor:pointer;">
-                  <i class="fas fa-pencil"></i>
-                </a>
-                <a href="peserta.php?hapus=<?= $p['id'] ?>"
-                  class="btn-icon btn-icon-delete"
-                  data-tooltip="Hapus peserta"
-                  onclick="return confirm('Hapus peserta <?= htmlspecialchars(addslashes($p['nama'])) ?>?')">
-                  <i class="fas fa-trash"></i>
-                </a>
-              </div>
-            </td>
-          </tr>
-        <?php endwhile; ?>
-        </tbody>
-      </table>
-      <?php else: ?>
-      <div class="empty-state">
-        <p><strong>Belum ada peserta di angkatan ini</strong></p>
-        <p>Gunakan tombol <strong>Tambah peserta</strong> di atas untuk menambahkan data.</p>
-      </div>
-      <?php endif; ?>
+    <?php if ($list && $list->num_rows > 0): ?>
+    <ul class="ps-list">
+      <?php while ($p = $list->fetch_assoc()):
+          $inisial = mb_strtoupper(mb_substr(trim($p['nama']), 0, 2));
+          $warna   = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777'][(int) $p['id'] % 6];
+      ?>
+      <li class="ps-row">
+        <div class="ps-row-link ps-row-statis">
+          <span class="pk-avatar" style="--warna: <?= $warna ?>"><?= e($inisial) ?></span>
+          <span class="ps-info">
+            <span class="ps-nama"><?= e($p['nama']) ?></span>
+            <span class="ps-chips">
+              <span class="ps-chip ps-chip-nomor"><?= e($p['nomor_peserta']) ?></span>
+              <span class="ps-chip ps-chip-paket"><?= e($p['paket_nama']) ?></span>
+            </span>
+          </span>
+        </div>
+        <div class="ps-aksi">
+          <button type="button" class="ps-ikon" title="Edit peserta" onclick="bukaModal(<?= (int) $p['id'] ?>)">
+            <i class="fas fa-pen"></i>
+          </button>
+          <a class="ps-ikon ps-ikon-hapus" title="Hapus peserta"
+             href="<?= url('/admin/peserta.php?hapus=' . (int) $p['id']) ?>"
+             onclick="return confirm('Hapus peserta <?= e(addslashes($p['nama'])) ?>?')">
+            <i class="fas fa-trash"></i>
+          </a>
+        </div>
+      </li>
+      <?php endwhile; ?>
+    </ul>
+    <?php else: ?>
+    <div class="empty-state">
+      <p><strong>Belum ada peserta di angkatan ini</strong></p>
+      <p>Klik <strong>Tambah peserta</strong> di atas untuk mulai mengisi.</p>
     </div>
+    <?php endif; ?>
 
     <?php endif; ?>
 

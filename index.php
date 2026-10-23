@@ -50,159 +50,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="<?= url('/assets/css/style.css') ?>">
-    <title>BBU Tryout - Login</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body { 
-            min-height: 100vh;
-            background: #F1F5F9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            padding: 20px;
-        }
-
-        body.login-bg-diagonal {
-            background-color: #F1F5F9;
-            background-image: repeating-linear-gradient(
-                -45deg,
-                transparent,
-                transparent 10px,
-                #E2E8F0 10px,
-                #E2E8F0 11px
-            );
-        }
-
-        .card {
-            background: white;
-            border-radius: 14px;
-            padding: 36px 36px 32px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 4px 24px rgba(15,30,60,0.08);
-            border: 1px solid #E2E8F0;
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        .logo img {
-            width: 128px;
-            height: auto;
-            margin: 0 auto 16px;
-            display: block;
-        }
-
-        .logo h1 {
-            font-size: 20px;
-            font-weight: 700;
-            color: #0F1E3C;
-            letter-spacing: -0.2px;
-        }
-
-        .logo p {
-            font-size: 12.5px;
-            color: #64748B;
-            margin-top: 4px;
-        }
-
-        .badge {
-            display: inline-block;
-            background: #EFF6FF;
-            color: #1D4ED8;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 3px 10px;
-            border-radius: 20px;
-            margin-bottom: 10px;
-            letter-spacing: 0.5px;
-        }
-
-        label {
-            display: block;
-            font-size: 12.5px;
-            font-weight: 600;
-            color: #334155;
-            margin-bottom: 6px;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1.5px solid #E2E8F0;
-            border-radius: 8px;
-            font-size: 14px;
-            color: #0F172A;
-            margin-bottom: 16px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            outline: none;
-        }
-
-        input:focus {
-            border-color: #2563EB;
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
-        }
-
-        button {
-            width: 100%;
-            padding: 11px;
-            background: #0F1E3C;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14.5px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        button:hover { background: #162846; }
-
-        .error {
-            background: #FEF2F2;
-            color: #DC2626;
-            border: 1px solid #FECACA;
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 22px;
-            font-size: 11.5px;
-            color: #94A3B8;
-        }
-    </style>
+    <meta name="theme-color" content="#15384F">
+    <title>BBU CAT Tryout | Bharuna Bhakti Utama</title>
+    <link rel="stylesheet" href="<?= url('/assets/css/login.css') ?>">
 </head>
-<body class="login-bg-diagonal ">
+<body class="login-page">
+<main class="login-shell">
+    <section class="brand-panel" aria-labelledby="brand-title">
+        <div class="brand-content">
+            <div class="brand-logo-frame">
+                <img src="<?= url('/assets/img/logo-bbu1.png') ?>" alt="Logo Bharuna Bhakti Utama" class="brand-logo">
+            </div>
 
-<div class="card">
-    <div class="logo">
-        <img src="<?= url('/assets/img/logo-bbu1.png') ?>" alt="Logo Bharuna Bhakti Utama">
-        <h1>BBU Tryout</h1>
-    </div>
+            <p class="brand-eyebrow">LEMBAGA DIKLAT REOR</p>
+            <h1 id="brand-title" class="brand-institution">REOR BHARUNA BHAKTI UTAMA</h1>
+            <div class="brand-divider" aria-hidden="true"></div>
+            <h2 class="brand-product">BBU <span>Tryout</span></h2>
+            <p class="brand-description">
+                Sistem ujian berbasis komputer untuk latihan dan evaluasi peserta diklat radio maritim.
+            </p>
+        </div>
+    </section>
 
-    <?php if ($error): ?>
-        <div class="error"><?= e($error) ?></div>
-    <?php endif; ?>
+    <section class="form-panel" aria-labelledby="login-title">
+        <div class="form-inner">
+            <div class="form-heading">
+                <h2 id="login-title">Masuk ke Sistem</h2>
+                <p class="form-description">Masukkan username dan password yang telah diberikan oleh panitia tryout.</p>
+            </div>
 
-    <form method="POST">
-        <label>Username / Nomor Peserta</label>
-        <input type="text" name="username" placeholder="Masukkan username" required autofocus>
+            <?php if ($error): ?>
+                <div class="error-message" role="alert">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.2h.01"/></svg>
+                    <span><?= e($error) ?></span>
+                </div>
+            <?php endif; ?>
 
-        <label>Password</label>
-        <input type="password" name="password" placeholder="Masukkan password" required>
+            <form method="POST" class="login-form" autocomplete="on">
+                <div class="form-field">
+                    <label for="username">Username / Nomor Peserta</label>
+                    <div class="input-wrap">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.3"/><path d="M5.5 19c.5-3.1 2.9-4.8 6.5-4.8s6 1.7 6.5 4.8"/></svg>
+                        <input
+                            id="username"
+                            type="text"
+                            name="username"
+                            placeholder="Masukkan username atau nomor peserta"
+                            value="<?= e($input ?? '') ?>"
+                            autocomplete="username"
+                            autocapitalize="none"
+                            spellcheck="false"
+                            required
+                            autofocus
+                        >
+                    </div>
+                </div>
 
-        <button type="submit">Masuk</button>
-    </form>
-</div>
+                <div class="form-field">
+                    <label for="password">Password</label>
+                    <div class="input-wrap">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10" width="13" height="10" rx="1.7"/><path d="M8.5 10V7.2a3.5 3.5 0 0 1 7 0V10M12 14v2.3"/></svg>
+                        <input
+                            id="password"
+                            type="password"
+                            name="password"
+                            placeholder="Masukkan password"
+                            autocomplete="current-password"
+                            required
+                        >
+                    </div>
+                </div>
 
+                <button type="submit" class="login-button">
+                    <span>Mulai Ujian</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12h14M12.5 6l6 6-6 6"/></svg>
+                </button>
+            </form>
+
+            <div class="login-assistance">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.7 9.2a2.4 2.4 0 1 1 4.2 1.6c-1.2 1.1-1.9 1.3-1.9 2.7M12 16.8h.01"/></svg>
+                <p>Pastikan akun yang digunakan sesuai dengan data dari panitia tryout.</p>
+            </div>
+        </div>
+    </section>
+</main>
 </body>
 </html>

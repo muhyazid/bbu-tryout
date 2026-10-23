@@ -133,147 +133,125 @@ if (isset($_GET['export']) && isset($_GET['sesi_id'])) {
 include __DIR__ . '/partials/layout-start.php';
 ?>
 
-    <!-- TAB MODE -->
-    <div class="filter-group" style="margin-bottom:20px;">
-      <a href="hasil.php?mode=hari_ini" class="filter-btn <?= $mode === 'hari_ini' ? 'filter-btn-active' : '' ?>">
-        Hari Ini
+    <div class="pk-hero">
+      <div class="pk-hero-teks">
+        <h2>Rekap Nilai</h2>
+        <p>Pilih sesi untuk melihat hasil peserta. Ekspor CSV untuk dibagikan per sesi.</p>
+      </div>
+      <?php if ($sesi_aktif_info && $hasil->num_rows > 0): ?>
+      <a href="<?= url('/admin/hasil.php?export=1&sesi_id=' . (int)$sesi_dipilih) ?>" class="ps-tambah">
+        <i class="fas fa-download"></i> Ekspor CSV
       </a>
-      <a href="hasil.php?mode=riwayat" class="filter-btn <?= $mode === 'riwayat' ? 'filter-btn-active' : '' ?>">
-        Cari Riwayat
-      </a>
+      <?php endif; ?>
+    </div>
+
+    <div class="rn-mode" role="tablist" aria-label="Pilih rentang tanggal">
+      <a href="<?= url('/admin/hasil.php?mode=hari_ini') ?>"
+         class="rn-mode-btn<?= $mode === 'hari_ini' ? ' aktif' : '' ?>"
+         <?= $mode === 'hari_ini' ? 'aria-selected="true"' : '' ?>>Hari ini</a>
+      <a href="<?= url('/admin/hasil.php?mode=riwayat') ?>"
+         class="rn-mode-btn<?= $mode === 'riwayat' ? ' aktif' : '' ?>"
+         <?= $mode === 'riwayat' ? 'aria-selected="true"' : '' ?>>Cari riwayat</a>
     </div>
 
     <?php if ($mode === 'riwayat'): ?>
-    <!-- PILIH TANGGAL (khusus mode riwayat) -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-body" style="padding:16px;">
-        <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-          <input type="hidden" name="mode" value="riwayat">
-          <div>
-            <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Pilih tanggal</div>
-            <input type="date" name="tanggal" class="form-input" value="<?= e($tgl_pilih) ?>">
-          </div>
-          <button type="submit" class="btn-primary" style="padding:9px 18px;">Tampilkan</button>
-        </form>
-      </div>
-    </div>
+    <form method="GET" class="rn-tanggal">
+      <input type="hidden" name="mode" value="riwayat">
+      <label for="rn-tgl">Tanggal</label>
+      <input id="rn-tgl" type="date" name="tanggal" value="<?= e($tgl_pilih) ?>">
+      <button type="submit" class="btn-admin-primary pk-btn">Tampilkan</button>
+    </form>
     <?php endif; ?>
 
-    <!-- DAFTAR SESI DI TANGGAL INI -->
     <?php if (count($daftar_sesi_tanggal) > 0): ?>
-    <div class="filter-group" style="margin-bottom:16px;flex-wrap:wrap;">
-      <?php foreach ($daftar_sesi_tanggal as $s): ?>
-      <a href="hasil.php?mode=<?= $mode ?>&tanggal=<?= e($tanggal_aktif) ?>&sesi_id=<?= (int)$s['id'] ?>"
-         class="filter-btn <?= $sesi_dipilih === (int)$s['id'] ? 'filter-btn-active' : '' ?>">
-        <?= e($s['nama_sesi']) ?> <span style="opacity:0.7;">(<?= (int)$s['jumlah_selesai'] ?> selesai)</span>
+    <div class="rn-sesi-grid">
+      <?php
+      $warna_daftar = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777'];
+      foreach ($daftar_sesi_tanggal as $s):
+          $aktif   = $sesi_dipilih === (int)$s['id'];
+          $inisial = mb_strtoupper(mb_substr(trim($s['paket_nama']), 0, 2));
+          $warna   = $warna_daftar[(int)$s['id'] % 6];
+      ?>
+      <a href="<?= url('/admin/hasil.php?mode=' . $mode . '&tanggal=' . urlencode($tanggal_aktif) . '&sesi_id=' . (int)$s['id']) ?>"
+         class="rn-sesi<?= $aktif ? ' aktif' : '' ?>"
+         <?= $aktif ? 'aria-current="true"' : '' ?>>
+        <span class="pk-avatar" style="--warna: <?= $warna ?>"><?= e($inisial) ?></span>
+        <span class="rn-sesi-teks">
+          <span class="rn-sesi-nama"><?= e($s['nama_sesi']) ?></span>
+          <span class="rn-sesi-info"><?= e($s['paket_nama']) ?> · <?= (int)$s['jumlah_selesai'] ?> selesai</span>
+        </span>
       </a>
       <?php endforeach; ?>
     </div>
     <?php else: ?>
-    <div class="empty-state" style="margin-bottom:16px;">
+    <div class="empty-state">
       <p><strong><?= $mode === 'hari_ini' ? 'Belum ada sesi ujian hari ini' : 'Tidak ada sesi ujian di tanggal ini' ?></strong></p>
       <p><?= $mode === 'hari_ini' ? 'Sesi akan muncul otomatis di sini setelah dibuat untuk hari ini.' : 'Coba pilih tanggal lain.' ?></p>
     </div>
     <?php endif; ?>
 
     <?php if ($sesi_aktif_info): ?>
-    <!-- FILTER NAMA (dalam sesi yang dipilih) -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-body" style="padding:16px;">
-        <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-          <input type="hidden" name="mode" value="<?= $mode ?>">
-          <input type="hidden" name="tanggal" value="<?= e($tanggal_aktif) ?>">
-          <input type="hidden" name="sesi_id" value="<?= $sesi_dipilih ?>">
-          <div>
-            <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Cari nama peserta</div>
-            <input type="text" name="nama" class="form-input"
-                   placeholder="Ketik nama peserta..."
-                   value="<?= e($fna) ?>" style="width:220px;">
-          </div>
-          <button type="submit" class="btn-primary" style="padding:9px 18px;">Cari</button>
-        </form>
-      </div>
-    </div>
 
-    <!-- TABEL HASIL -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <h3><?= e($sesi_aktif_info['nama_sesi']) ?> <span class="count-pill"><?= $hasil->num_rows ?> data</span></h3>
-          <span style="font-size:12px;color:var(--text-muted);"><?= e($sesi_aktif_info['paket_nama']) ?> · <?= date('d M Y', strtotime($tanggal_aktif)) ?></span>
+    <form method="GET" class="rn-cari" role="search">
+      <input type="hidden" name="mode" value="<?= e($mode) ?>">
+      <input type="hidden" name="tanggal" value="<?= e($tanggal_aktif) ?>">
+      <input type="hidden" name="sesi_id" value="<?= (int)$sesi_dipilih ?>">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <input type="search" name="nama" value="<?= e($fna) ?>" placeholder="Cari nama peserta..." autocomplete="off">
+    </form>
+
+    <section class="pk-panel rn-panel">
+      <header class="pk-panel-head">
+        <div class="pk-panel-judul">
+          <h2><?= e($sesi_aktif_info['nama_sesi']) ?></h2>
+          <p><?= e($sesi_aktif_info['paket_nama']) ?> · <?= date('d M Y', strtotime($tanggal_aktif)) ?> · <?= $hasil->num_rows ?> peserta</p>
         </div>
-        <?php if ($hasil->num_rows > 0): ?>
-        <a href="hasil.php?export=1&sesi_id=<?= $sesi_dipilih ?>"
-          class="btn-admin-primary" style="font-size:13px;padding:8px 14px;">
-          <i class="fas fa-download" style="font-size:12px;"></i> Export CSV
-        </a>
-        <?php endif; ?>
-      </div>
+      </header>
 
       <?php if ($hasil->num_rows > 0): ?>
-      <div style="overflow-x:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Peserta</th>
-            <th style="text-align:center;">Nilai</th>
-            <th style="text-align:center;">Status</th>
-            <th>Waktu</th>
-            <th>Review</th>
-          </tr>
-        </thead>
-        <tbody>
+      <?php
+      $rows = [];
+      while ($r = $hasil->fetch_assoc()) $rows[] = $r;
+      ?>
+      <ul class="ps-list rn-list">
         <?php
-        $no = 1;
-        $rows = [];
-        while ($r = $hasil->fetch_assoc()) $rows[] = $r;
+        $warna_daftar = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777'];
         foreach ($rows as $r):
-            $lulus = $r['skor'] >= 70;
-            $m = floor($r['durasi_detik'] / 60);
-            $s = $r['durasi_detik'] % 60;
+            $lulus   = $r['skor'] >= 70;
+            $m       = floor($r['durasi_detik'] / 60);
+            $d       = $r['durasi_detik'] % 60;
+            $inisial = mb_strtoupper(mb_substr(trim($r['nama']), 0, 2));
+            $warna   = $warna_daftar[(int)$r['peserta_id'] % 6];
         ?>
-          <tr>
-            <td style="color:var(--text-muted);"><?= $no++ ?></td>
-            <td>
-              <div style="font-weight:600;font-size:14px;"><?= e($r['nama']) ?></div>
-              <code style="font-size:12px;background:#f0f2f5;padding:1px 6px;border-radius:4px;">
-                <?= e($r['nomor_peserta']) ?>
-              </code>
-            </td>
-            <td style="text-align:center;">
-              <span style="font-size:24px;font-weight:800;
-                           color:<?= $lulus ? 'var(--success)' : 'var(--danger)' ?>;">
-                <?= $r['skor'] ?>
+        <li class="ps-row">
+          <div class="ps-row-link ps-row-statis rn-row">
+            <span class="pk-avatar" style="--warna: <?= $warna ?>"><?= e($inisial) ?></span>
+            <span class="ps-info">
+              <span class="ps-nama"><?= e($r['nama']) ?></span>
+              <span class="ps-chips">
+                <span class="ps-chip ps-chip-nomor"><?= e($r['nomor_peserta']) ?></span>
               </span>
-            </td>
-            <td style="text-align:center;">
-              <?php if ($lulus): ?>
-              <span class="badge badge-aktif">Lulus</span>
-              <?php else: ?>
-              <span class="badge badge-ujian">Belum</span>
-              <?php endif; ?>
-            </td>
-            <td style="font-size:13px;color:var(--text-muted);">
-              <?= $m ?>m <?= $s ?>d
-            </td>
-            <td>
-                <a href="<?= url('/review.php?hasil_id=' . $r['id']) ?>" target="_blank" class="btn-icon" data-tooltip="Lihat review jawaban">
-                    <i class="fas fa-eye"></i>
-                </a>
-            </td>
-          </tr>
+            </span>
+            <span class="rn-waktu"><?= $m ?> mnt <?= $d ?> dtk</span>
+            <span class="rn-nilai <?= $lulus ? 'lulus' : 'belum' ?>"><?= (int)$r['skor'] ?></span>
+            <span class="rn-status <?= $lulus ? 'lulus' : 'belum' ?>"><?= $lulus ? 'Lulus' : 'Belum' ?></span>
+          </div>
+          <div class="ps-aksi">
+            <a class="ps-ikon" href="<?= url('/review.php?hasil_id=' . (int)$r['id']) ?>" target="_blank" title="Lihat review jawaban">
+              <i class="fas fa-eye"></i>
+            </a>
+          </div>
+        </li>
         <?php endforeach; ?>
-        </tbody>
-      </table>
-      </div>
+      </ul>
       <?php else: ?>
       <div class="empty-state">
         <p><strong>Belum ada peserta yang menyelesaikan sesi ini</strong></p>
         <p>Data akan muncul setelah peserta submit jawaban.</p>
       </div>
       <?php endif; ?>
-    </div>
+    </section>
     <?php endif; ?>
+
 
 <?php include __DIR__ . '/partials/layout-end.php'; ?>

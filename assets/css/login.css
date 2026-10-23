@@ -1,0 +1,357 @@
+:root {
+    --navy: #15384F;
+    --navy-deep: #102D42;
+    --sea: #2F6B87;
+    --sea-soft: #6E9CB2;
+    --ink: #243746;
+    --muted: #647582;
+    --line: #DCE4E9;
+    --paper: #F1F4F6;
+    --white: #FFFFFF;
+    --danger: #A62B2B;
+    --danger-bg: #FFF4F3;
+}
+
+* { box-sizing: border-box; }
+
+html { min-height: 100%; }
+
+body.login-page {
+    min-height: 100vh;
+    margin: 0;
+    padding: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.login-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+    width: min(1120px, 100%);
+    min-height: 660px;
+    overflow: hidden;
+    background: var(--white);
+    border: 1px solid #D8E1E7;
+    border-radius: 10px;
+    box-shadow: 0 18px 48px rgba(16, 45, 66, 0.11);
+}
+
+/* Panel identitas lembaga */
+.brand-panel {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 48px 42px;
+    overflow: hidden;
+    color: var(--white);
+    background: linear-gradient(145deg, #173B52 0%, #15384F 54%, #102F45 100%);
+}
+
+/* Gelombang sinyal/radar yang sangat halus: nuansa teknis maritim tanpa ilustrasi tempelan. */
+.brand-panel::before {
+    position: absolute;
+    z-index: -1;
+    right: -175px;
+    bottom: -180px;
+    width: 440px;
+    height: 440px;
+    border-radius: 50%;
+    background: repeating-radial-gradient(
+        circle at center,
+        transparent 0 31px,
+        rgba(184, 207, 219, 0.055) 32px 33px,
+        transparent 34px 63px
+    );
+    content: "";
+    pointer-events: none;
+}
+
+.brand-panel::after {
+    position: absolute;
+    z-index: -1;
+    right: 0;
+    bottom: 82px;
+    width: 34%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(184, 207, 219, 0.12), transparent);
+    content: "";
+    pointer-events: none;
+}
+
+.brand-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 410px;
+    margin: auto 0;
+    text-align: center;
+}
+
+.brand-logo-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 278px;
+    max-width: 100%;
+    margin: 0 auto 28px;
+    padding: 9px 11px;
+    background: #FFFFFF;
+    border: 1px solid rgba(221, 230, 235, 0.9);
+    border-radius: 4px;
+}
+
+.brand-logo {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.brand-eyebrow {
+    margin: 0 0 9px;
+    color: #C5D6DF;
+    font-size: 10px;
+    line-height: 1.5;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.brand-institution {
+    max-width: 385px;
+    margin: 0 auto;
+    color: #FFFFFF;
+    font-size: clamp(20px, 2.25vw, 25px);
+    line-height: 1.35;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    text-wrap: balance;
+}
+
+.brand-divider {
+    width: 46px;
+    height: 2px;
+    margin: 22px auto 18px;
+    background: #66879A;
+}
+
+.brand-product {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: clamp(32px, 3.3vw, 40px);
+    line-height: 1.12;
+    font-weight: 750;
+    letter-spacing: -0.035em;
+}
+
+.brand-product span {
+    color: #D1DEE5;
+    font-weight: 500;
+}
+
+.brand-description {
+    max-width: 345px;
+    margin: 16px auto 0;
+    color: #D0DDE5;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+/* Panel login */
+.form-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 58px 60px 36px;
+    background: #FFFFFF;
+}
+
+.form-inner { width: 100%; max-width: 370px; }
+
+.form-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 12px;
+    color: var(--sea);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+}
+
+.form-eyebrow::before { display: inline-block; width: 24px; height: 2px; background: var(--sea); content: ""; }
+
+.form-heading h2 {
+    margin: 0;
+    color: #1B3446;
+    font-size: 29px;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+}
+
+.form-description {
+    margin: 11px 0 29px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.error-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: -8px 0 20px;
+    padding: 11px 12px;
+    color: var(--danger);
+    background: var(--danger-bg);
+    border: 1px solid #F1D3D0;
+    border-radius: 5px;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.error-message svg { flex: 0 0 17px; width: 17px; height: 17px; margin-top: 1px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+.login-form { display: flex; flex-direction: column; gap: 19px; }
+.form-field label { display: block; margin: 0 0 8px; color: #304453; font-size: 12.5px; font-weight: 650; }
+
+.input-wrap { position: relative; }
+.input-wrap > svg {
+    position: absolute;
+    top: 50%;
+    left: 13px;
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
+    fill: none;
+    stroke: #718594;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.input-wrap input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 49px;
+    margin: 0;
+    padding: 0 13px 0 42px;
+    border: 1px solid #CCD8E0;
+    border-radius: 5px;
+    outline: none;
+    background: #FCFDFE;
+    color: #213746;
+    font: inherit;
+    font-size: 13px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.input-wrap input::placeholder { color: #98A6B0; }
+.input-wrap input:hover { border-color: #AABBC6; }
+.input-wrap input:focus { border-color: var(--sea); background: #FFFFFF; box-shadow: 0 0 0 3px rgba(47, 107, 135, 0.11); }
+
+.login-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 11px;
+    width: 100%;
+    min-height: 49px;
+    margin-top: 4px;
+    padding: 12px 18px;
+    border: 1px solid var(--navy);
+    border-radius: 5px;
+    color: #FFFFFF;
+    background: var(--navy);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.login-button:hover { background: #1D4D68; border-color: #1D4D68; }
+.login-button:focus-visible { outline: 3px solid rgba(47, 107, 135, 0.32); outline-offset: 3px; }
+.login-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.login-assistance {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #E6ECEF;
+    color: #70818C;
+}
+
+.login-assistance svg { flex: 0 0 17px; width: 17px; height: 17px; margin-top: 1px; fill: none; stroke: var(--sea); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.login-assistance p { margin: 0; font-size: 11.5px; line-height: 1.6; }
+
+.form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-top: 38px;
+    color: #8998A2;
+    font-size: 9px;
+    line-height: 1.5;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+}
+
+.footer-separator { width: 3px; height: 3px; border-radius: 50%; background: #7896A7; }
+
+@media (max-width: 900px) {
+    body.login-page { padding: 22px; }
+    .login-shell { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); min-height: 620px; }
+    .brand-panel { padding: 40px 30px; }
+    .brand-logo-frame { width: 252px; }
+    .brand-institution { font-size: 22px; }
+    .brand-product { font-size: 35px; }
+    .form-panel { padding: 42px 34px 30px; }
+}
+
+@media (max-width: 680px) {
+    body.login-page { display: block; padding: 0; background: #FFFFFF; }
+    .login-shell { display: flex; flex-direction: column; width: 100%; min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+    .brand-panel { min-height: 0; padding: 34px 25px 32px; }
+    .brand-content { max-width: 460px; }
+    .brand-logo-frame { width: 218px; margin-bottom: 23px; padding: 8px 10px; }
+    .brand-eyebrow { margin-bottom: 8px; font-size: 9px; }
+    .brand-institution { max-width: 360px; font-size: 20px; }
+    .brand-divider { margin: 18px auto 15px; }
+    .brand-product { font-size: 31px; }
+    .brand-description { max-width: 440px; margin-top: 10px; font-size: 12px; line-height: 1.65; }
+    .form-panel { flex: 1; align-items: flex-start; padding: 32px 25px 25px; }
+    .form-inner { max-width: 430px; margin: 0 auto; }
+    .form-eyebrow { font-size: 9px; }
+    .form-heading h2 { font-size: 25px; }
+    .form-description { margin-bottom: 24px; }
+    .form-footer { margin-top: 28px; }
+}
+
+@media (max-width: 380px) {
+    .brand-panel { padding-right: 20px; padding-left: 20px; }
+    .form-panel { padding-right: 20px; padding-left: 20px; }
+    .brand-logo-frame { width: 198px; }
+    .brand-institution { font-size: 18px; }
+    .brand-product { font-size: 29px; }
+    .brand-description { font-size: 11.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}

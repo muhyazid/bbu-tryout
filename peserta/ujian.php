@@ -56,7 +56,9 @@ $result = null;
 $skey = 'ujian_' . $sesi_id . '_' . $peserta_id;
 
 if (!isset($_SESSION[$skey])) {
-    // Ambil soal beserta info kategori, diurutkan per kategori
+    // Ambil SELURUH bank soal dari semua materi yang terhubung ke paket peserta.
+    // jumlah_soal pada sesi lama tetap disimpan untuk kompatibilitas database,
+    // tetapi tidak lagi digunakan untuk memangkas jumlah soal.
     $stmt = $conn->prepare("
         SELECT s.id, k.id AS kat_id, k.nama AS kat_nama
         FROM soal s
@@ -69,76 +71,111 @@ if (!isset($_SESSION[$skey])) {
     $stmt->execute();
     $res = $stmt->get_result();
 
-    // Kelompokkan per kategori dulu
+    // Kelompokkan seluruh soal per materi. Urutan soal diacak di dalam materi,
+    // tetapi tidak ada butir yang dibuang dari bank soal paket.
     $per_kat = [];
     while ($r = $res->fetch_assoc()) {
-        $kid = $r['kat_id'];
+        $kid = (int)$r['kat_id'];
         if (!isset($per_kat[$kid])) {
             $per_kat[$kid] = [
+                'id'    => $kid,
                 'nama'  => $r['kat_nama'],
                 'soals' => [],
             ];
         }
-        $per_kat[$kid]['soals'][] = $r['id'];
+        $per_kat[$kid]['soals'][] = (int)$r['id'];
     }
 
-    // Shuffle dalam tiap kategori, lalu gabungkan
-    $soal_ids   = [];
-    $mapel_map  = []; // soal_id => ['kat_nama', 'kat_urut_dalam_kat']
-    $mapel_ranges = []; // untuk grid panel kanan
-
-    $jumlah_target = (int)$sesi['jumlah_soal'];
-    $total_tersedia = array_sum(array_map(fn($k) => count($k['soals']), $per_kat));
-    $per_kat_arr    = array_values($per_kat);
-    $n_kat          = count($per_kat_arr);
-
-    // Ambil proporsional dari tiap kategori
-    $sisa  = $jumlah_target;
-    $kat_result = [];
-    foreach ($per_kat_arr as $i => $kat) {
-        if ($sisa <= 0) break;
-        $porsi = ($i === $n_kat - 1)
-            ? $sisa
-            : (int)round($jumlah_target * count($kat['soals']) / max($total_tersedia, 1));
-        $porsi = min($porsi, count($kat['soals']), $sisa);
-        shuffle($kat['soals']);
-        $kat_result[] = [
-            'nama'  => $kat['nama'],
-            'soals' => array_slice($kat['soals'], 0, $porsi),
-        ];
-        $sisa -= $porsi;
-    }
-
-    // Buat flat array + map
+    $soal_ids = [];
+    $mapel_map = [];
+    $mapel_ranges = [];
     $no_global = 1;
-    foreach ($kat_result as $kat) {
+
+    foreach ($per_kat as $kat) {
+        shuffle($kat['soals']);
+        $jumlah_materi = count($kat['soals']);
+        if ($jumlah_materi === 0) continue;
+
         $start = $no_global;
         foreach ($kat['soals'] as $no_dalam_kat => $sid) {
             $soal_ids[] = $sid;
             $mapel_map[$sid] = [
-                'kat_nama'      => $kat['nama'],
-                'no_dalam_kat'  => $no_dalam_kat + 1,
-                'total_dalam_kat' => count($kat['soals']),
+                'kat_id'          => (int)$kat['id'],
+                'kat_nama'        => $kat['nama'],
+                'no_dalam_kat'    => $no_dalam_kat + 1,
+                'total_dalam_kat' => $jumlah_materi,
             ];
             $no_global++;
         }
+
         $mapel_ranges[] = [
-            'nama'  => $kat['nama'],
-            'start' => $start,
-            'end'   => $no_global - 1,
+            'id'     => (int)$kat['id'],
+            'nama'   => $kat['nama'],
+            'start'  => $start,
+            'end'    => $no_global - 1,
+            'jumlah' => $jumlah_materi,
         ];
     }
 
     $_SESSION[$skey] = [
-        'ids'           => $soal_ids,
-        'mapel_map'     => $mapel_map,
-        'mapel_ranges'  => $mapel_ranges,
+        'ids'          => $soal_ids,
+        'mapel_map'    => $mapel_map,
+        'mapel_ranges' => $mapel_ranges,
     ];
 }
-
 $soal_ids     = $_SESSION[$skey]['ids'];
 $mapel_map    = $_SESSION[$skey]['mapel_map'];
 $mapel_ranges = $_SESSION[$skey]['mapel_ranges'];
+
+// Normalisasi metadata cache lama tanpa mengganti daftar soal yang sedang dikerjakan.
+// Dengan begitu, sesi yang sudah berlangsung tidak mendadak berubah dari 50 soal menjadi ratusan.
+$butuh_metadata_baru = false;
+foreach ($mapel_map as $meta_lama) {
+    if (!isset($meta_lama['kat_id'])) {
+        $butuh_metadata_baru = true;
+        break;
+    }
+}
+foreach ($mapel_ranges as $range_lama) {
+    if (!isset($range_lama['id']) || !isset($range_lama['jumlah'])) {
+        $butuh_metadata_baru = true;
+        break;
+    }
+}
+
+if ($butuh_metadata_baru && !empty($soal_ids)) {
+    $id_str_meta = implode(',', array_map('intval', $soal_ids));
+    $lookup_meta = [];
+    $meta_res = $conn->query("
+        SELECT s.id, k.id AS kat_id, k.nama AS kat_nama
+        FROM soal s
+        JOIN kategori k ON k.id = s.kategori_id
+        WHERE s.id IN ($id_str_meta)
+    ");
+    while ($meta_row = $meta_res->fetch_assoc()) {
+        $lookup_meta[(int)$meta_row['id']] = [
+            'kat_id' => (int)$meta_row['kat_id'],
+            'kat_nama' => $meta_row['kat_nama'],
+        ];
+    }
+
+    foreach ($mapel_map as $sid_meta => &$meta_lama) {
+        if (!isset($meta_lama['kat_id'])) {
+            $meta_lama['kat_id'] = $lookup_meta[(int)$sid_meta]['kat_id'] ?? 0;
+        }
+    }
+    unset($meta_lama);
+
+    foreach ($mapel_ranges as &$range_lama) {
+        $first_id = $soal_ids[((int)$range_lama['start']) - 1] ?? 0;
+        $range_lama['id'] = (int)($range_lama['id'] ?? ($lookup_meta[(int)$first_id]['kat_id'] ?? 0));
+        $range_lama['jumlah'] = (int)($range_lama['jumlah'] ?? max(0, (int)$range_lama['end'] - (int)$range_lama['start'] + 1));
+    }
+    unset($range_lama);
+
+    $_SESSION[$skey]['mapel_map'] = $mapel_map;
+    $_SESSION[$skey]['mapel_ranges'] = $mapel_ranges;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
     // Cegah replay/double-submit: tolak kalau status sudah 'selesai'
@@ -169,6 +206,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
     $total_bobot_didapat  = 0;
     $total_bobot_maksimal = 0;
 
+    // Ambil jawaban autosave yang sudah ada dalam satu query, agar submit tetap efisien
+    // walaupun paket memuat ratusan butir.
+    $jawaban_existing = [];
+    $ambil_jawaban_existing = $conn->prepare("SELECT id, soal_id FROM jawaban WHERE peserta_id=? AND sesi_id=? ORDER BY id ASC");
+    $ambil_jawaban_existing->bind_param("ii", $peserta_id, $sesi_id);
+    $ambil_jawaban_existing->execute();
+    $jawaban_existing_res = $ambil_jawaban_existing->get_result();
+    while ($row_jwb_existing = $jawaban_existing_res->fetch_assoc()) {
+        $existing_soal_id = (int)$row_jwb_existing['soal_id'];
+        if (!isset($jawaban_existing[$existing_soal_id])) {
+            $jawaban_existing[$existing_soal_id] = (int)$row_jwb_existing['id'];
+        }
+    }
+    $upd_jawaban = $conn->prepare("UPDATE jawaban SET jawaban_dipilih=?, is_benar=? WHERE id=?");
+    $ins_jawaban = $conn->prepare("INSERT INTO jawaban (peserta_id,sesi_id,soal_id,jawaban_dipilih,is_benar) VALUES (?,?,?,?,?)");
+
     foreach ($soal_ids as $sid2) {
         $jwb    = isset($_POST['jwb_'.$sid2]) && $_POST['jwb_'.$sid2] !== ''
                   ? $_POST['jwb_'.$sid2]
@@ -194,10 +247,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
             $total_bobot_didapat += $bobot;
         }
 
-        $ins = $conn->prepare("INSERT INTO jawaban (peserta_id,sesi_id,soal_id,jawaban_dipilih,is_benar) VALUES (?,?,?,?,?)");
-        $ins->bind_param("iiisi", $peserta_id, $sesi_id, $sid2, $jwb, $ib);
-        if (!$ins->execute()) {
-            error_log("Gagal insert jawaban: soal_id=$sid2, peserta_id=$peserta_id");
+        // Auto-save mungkin sudah membuat baris jawaban. Perbarui baris itu saat submit
+        // supaya satu soal tidak mendapatkan baris baru setiap kali dikirim.
+        if (isset($jawaban_existing[$sid2])) {
+            $jawaban_id = (int)$jawaban_existing[$sid2];
+            $upd_jawaban->bind_param("sii", $jwb, $ib, $jawaban_id);
+            if (!$upd_jawaban->execute()) {
+                error_log("Gagal update jawaban: soal_id=$sid2, peserta_id=$peserta_id");
+            }
+        } else {
+            $ins_jawaban->bind_param("iiisi", $peserta_id, $sesi_id, $sid2, $jwb, $ib);
+            if (!$ins_jawaban->execute()) {
+                error_log("Gagal insert jawaban: soal_id=$sid2, peserta_id=$peserta_id");
+            }
         }
     }
 
@@ -321,7 +383,13 @@ $sisa_detik_awal = hitung_sisa_waktu_detik($hasil_existing, (int)$sesi['durasi_m
     </div>
     <div class="exam-timer-wrap">
       <span class="exam-timer-label">Sisa waktu</span>
-      <div id="timer" class="exam-timer"><?= sprintf('%02d:%02d', floor($sisa_detik_awal / 60), $sisa_detik_awal % 60) ?></div>
+      <div id="timer" class="exam-timer"><?php
+        if ($sisa_detik_awal >= 3600) {
+            echo sprintf('%02d:%02d:%02d', floor($sisa_detik_awal / 3600), floor(($sisa_detik_awal % 3600) / 60), $sisa_detik_awal % 60);
+        } else {
+            echo sprintf('%02d:%02d', floor($sisa_detik_awal / 60), $sisa_detik_awal % 60);
+        }
+      ?></div>
     </div>
     <div class="exam-user">
       <span><?= e($peserta_nama) ?></span>
@@ -336,9 +404,14 @@ $sisa_detik_awal = hitung_sisa_waktu_detik($hasil_existing, (int)$sesi['durasi_m
     <input type="hidden" name="durasi_detik" id="durasi_detik" value="0">
 
     <div class="exam-content-area">
+      <div class="exam-workspace">
 
-      <!-- Kiri: soal -->
+      <!-- Area utama: soal -->
       <div class="exam-main">
+
+        <?php if (!empty($soal_arr)): ?>
+        <p class="exam-save-status" id="autosave-status" aria-live="polite">Jawaban tersimpan otomatis saat dipilih.</p>
+        <?php endif; ?>
 
         <?php if (empty($soal_arr)): ?>
         <div class="exam-empty">
@@ -384,12 +457,11 @@ $sisa_detik_awal = hitung_sisa_waktu_detik($hasil_existing, (int)$sesi['durasi_m
         <?php endif; ?>
 
         <!-- Soal card -->
-        <article class="soal-card" id="card-<?= $soal['id'] ?>">
+        <article class="soal-card" id="card-<?= (int)$soal['id'] ?>"
+                 data-no="<?= (int)$no_global ?>"
+                 data-category-id="<?= (int)($meta_soal['kat_id'] ?? 0) ?>">
           <div class="soal-meta">
-            <span class="soal-num">Soal <strong><?= $no_global ?></strong> dari <?= count($soal_arr) ?></span>
-            <?php if ($kat_nama): ?>
-            <span class="soal-mapel-tag"><?= e($kat_nama) ?> · <?= $no_kat ?> dari <?= $total_kat ?></span>
-            <?php endif; ?>
+            <span class="soal-num">Soal <strong><?= $no_kat ?></strong> dari <?= $total_kat ?></span>
           </div>
           <div class="soal-text"><?= nl2br(e($soal['pertanyaan'])) ?></div>
           <div class="jwb-grid" role="group" aria-label="Pilihan jawaban soal <?= $no_global ?>">
@@ -416,59 +488,56 @@ $sisa_detik_awal = hitung_sisa_waktu_detik($hasil_existing, (int)$sesi['durasi_m
 
         <?php endif; ?>
 
+        <?php if (!empty($soal_arr)): ?>
+        <!-- Navigasi ditempatkan langsung di bawah kartu soal agar mudah dijangkau. -->
+        <footer class="exam-footer" aria-label="Navigasi soal">
+            <button type="button" id="btn-prev" onclick="prevSoal()" class="btn-secondary">
+                ← Sebelumnya
+            </button>
+            <span class="exam-footer-count" id="exam-footer-count">Soal 1 dari <?= count($soal_arr) ?></span>
+            <button type="button" id="btn-next" onclick="nextSoal()" class="btn-primary">
+                Selanjutnya →
+            </button>
+        </footer>
+
+        <?php endif; ?>
+
       </div><!-- /exam-main -->
 
-      <!-- Kanan: grid soal per mapel -->
-      <aside class="exam-sidebar">
-        <div class="exam-sidebar-inner">
-          <?php foreach ($mapel_ranges as $mr): ?>
-          <div class="grid-mapel-section">
-            <div class="grid-mapel-label"><?= e($mr['nama']) ?></div>
-            <div class="soal-num-grid" id="grid-<?= $mr['start'] ?>">
-              <?php for ($n = $mr['start']; $n <= $mr['end']; $n++):
-                  $soal_di_posisi_ini = $soal_arr[$n - 1]['id'] ?? null;
-                  $sudah_dijawab = $soal_di_posisi_ini && isset($jawaban_tersimpan[$soal_di_posisi_ini]) && $jawaban_tersimpan[$soal_di_posisi_ini] !== null;
-              ?>
-              <button type="button"
-                      class="soal-num-btn <?= $sudah_dijawab ? 'answered' : 'unanswered' ?>"
-                      id="gnum-<?= $n ?>"
-                      onclick="scrollToSoal(<?= $n ?>)">
-                <?= $n ?>
-              </button>
-              <?php endfor; ?>
+      <?php if (!empty($soal_arr)): ?>
+      <aside class="exam-sidebar" aria-label="Navigasi nomor soal">
+        <section class="question-palette" id="question-palette">
+          <div class="question-palette-heading">
+            <div>
+              <h2>Navigasi soal</h2>
+              <p>Pilih nomor untuk berpindah soal</p>
             </div>
+            <span class="palette-total" id="palette-total-count">0/<?= count($soal_arr) ?></span>
           </div>
-          <?php endforeach; ?>
-
-          <div class="grid-legend">
-            <div class="legend-row"><div class="legend-dot current"></div> Saat ini</div>
-            <div class="legend-row"><div class="legend-dot answered"></div> Terjawab</div>
-            <div class="legend-row"><div class="legend-dot unanswered"></div> Belum</div>
+          <div class="question-palette-legend" aria-label="Keterangan status soal">
+            <span><i class="legend-dot legend-dot--current"></i> Aktif</span>
+            <span><i class="legend-dot legend-dot--answered"></i> Dijawab</span>
+            <span><i class="legend-dot legend-dot--unanswered"></i> Kosong</span>
           </div>
-        </div>
+          <div class="question-number-grid">
+            <?php foreach ($soal_arr as $nav_index => $nav_soal):
+                $nav_no = $nav_index + 1;
+                $nav_soal_id = (int)$nav_soal['id'];
+            ?>
+            <button type="button" class="question-number"
+                    data-question-no="<?= $nav_no ?>"
+                    data-question-id="<?= $nav_soal_id ?>"
+                    data-question-label="Soal <?= $nav_no ?>"
+                    aria-label="Buka soal <?= $nav_no ?>"
+                    title="Soal <?= $nav_no ?>"><?= $nav_no ?></button>
+            <?php endforeach; ?>
+          </div>
+        </section>
       </aside>
+      <?php endif; ?>
 
+      </div><!-- /exam-workspace -->
     </div><!-- /exam-content-area -->
-
-    <!-- Footer -->
-    <footer class="exam-footer">
-        <button type="button" id="btn-prev"
-                onclick="prevSoal()"
-                class="btn-secondary"
-                style="padding:8px 18px;">
-            ← Sebelumnya
-        </button>
-        <p class="exam-footer-progress">
-            Soal <strong id="current-no">1</strong> dari <?= count($soal_arr) ?> &nbsp;·&nbsp;
-            Terjawab: <strong id="answered-count">0</strong>
-        </p>
-        <button type="button" id="btn-next"
-                onclick="nextSoal()"
-                class="btn-primary"
-                style="padding:8px 18px;">
-            Selanjutnya →
-        </button>
-    </footer>
 
   </form>
 
@@ -539,55 +608,90 @@ const SESI_ID       = <?= $sesi_id ?>;
 const MODE          = '<?= e($sesi['mode']) ?>';
 const TOTAL_SOAL    = <?= count($soal_arr) ?>;
 
-// ── ONE QUESTION PER SCREEN ────────────────────────────────
-let currentNo = 1; // soal yang sedang ditampilkan (1-based)
+// ── NAVIGASI UJIAN: SATU SOAL PER LAYAR + PALET NOMOR PER MATERI ──
+const MATERI_RANGES = <?= json_encode(array_map(static function ($mr) {
+    return [
+        'id' => (int)$mr['id'],
+        'nama' => (string)$mr['nama'],
+        'start' => (int)$mr['start'],
+        'end' => (int)$mr['end'],
+        'jumlah' => (int)$mr['jumlah'],
+    ];
+}, $mapel_ranges), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
 
-const allCards    = document.querySelectorAll('.soal-card');
-const allIndicators = document.querySelectorAll('.mapel-indicator');
+let currentNo = 1;
+let autoAdvanceTimer = null;
+const allCards = Array.from(document.querySelectorAll('.soal-card'));
+const allIndicators = Array.from(document.querySelectorAll('.mapel-indicator'));
+const answeredIds = new Set(
+    allCards
+        .filter(card => card.querySelector('input[type="radio"]:checked'))
+        .map(card => card.id.replace('card-', ''))
+);
+let answered = answeredIds.size;
+
+function materiUntukSoal(no) {
+    return MATERI_RANGES.find(materi => no >= materi.start && no <= materi.end) || MATERI_RANGES[0] || null;
+}
 
 function tampilSoal(no) {
-    // Sembunyikan semua
-    allCards.forEach(c => c.classList.remove('aktif'));
-    allIndicators.forEach(i => i.classList.remove('aktif'));
-    // Tampilkan soal ke-no
-    if (allCards[no - 1]) allCards[no - 1].classList.add('aktif');
+    if (!allCards.length) return;
+    if (autoAdvanceTimer) {
+        clearTimeout(autoAdvanceTimer);
+        autoAdvanceTimer = null;
+    }
+    no = Math.max(1, Math.min(TOTAL_SOAL, Number(no) || 1));
 
-    // Tampilkan mapel indicator yang relevan
-    // Cari indicator terdekat sebelum soal ini
-    const card = allCards[no - 1];
-    if (card) {
-        let prev = card.previousElementSibling;
-        while (prev) {
-            if (prev.classList.contains('mapel-indicator')) {
-                prev.classList.add('aktif');
-                break;
-            }
-            if (prev.classList.contains('soal-card')) break;
-            prev = prev.previousElementSibling;
-        }
+    allCards.forEach((card, index) => card.classList.toggle('aktif', index === no - 1));
+    allIndicators.forEach(indicator => indicator.classList.remove('aktif'));
+
+    const materi = materiUntukSoal(no);
+    if (materi) {
+        const indicator = document.getElementById('mapel-indicator-' + materi.start);
+        if (indicator) indicator.classList.add('aktif');
     }
 
-    // Update grid nomor
-    document.querySelectorAll('.soal-num-btn').forEach(btn => {
-        btn.classList.remove('current');
-    });
-    const gBtn = document.getElementById('gnum-' + no);
-    if (gBtn) gBtn.classList.add('current');
-
-    // Update tombol prev/next
     currentNo = no;
-    updateNavBtn();
+    const selectMateri = document.getElementById('select-materi');
+    if (materi && selectMateri) selectMateri.value = String(materi.start);
 
-    // Scroll soal ke atas
-    if (allCards[no - 1]) allCards[no - 1].scrollIntoView({ block: 'start' });
+    const footerCount = document.getElementById('exam-footer-count');
+    if (footerCount) footerCount.textContent = 'Soal ' + no + ' dari ' + TOTAL_SOAL;
+
+    updateNavBtn();
+    updateProgress();
+    updateQuestionPalette();
+
+    const main = document.querySelector('.exam-main');
+    if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateQuestionPalette() {
+    const buttons = Array.from(document.querySelectorAll('.question-number'));
+    buttons.forEach(button => {
+        const no = Number(button.dataset.questionNo);
+        const soalId = String(button.dataset.questionId || '');
+        const isCurrent = no === currentNo;
+        const isAnswered = answeredIds.has(soalId);
+
+        button.classList.toggle('is-current', isCurrent);
+        button.classList.toggle('is-answered', isAnswered);
+        if (isCurrent) {
+            button.setAttribute('aria-current', 'step');
+        } else {
+            button.removeAttribute('aria-current');
+        }
+        const status = isCurrent ? 'sedang dibuka' : (isAnswered ? 'sudah dijawab' : 'belum dijawab');
+        button.setAttribute('aria-label', 'Buka ' + button.dataset.questionLabel + ' (' + status + ')');
+    });
+
+    const paletteCount = document.getElementById('palette-total-count');
+    if (paletteCount) paletteCount.textContent = answeredIds.size + '/' + TOTAL_SOAL;
 }
 
 function nextSoal() {
-    if (currentNo < TOTAL_SOAL) {
-        tampilSoal(currentNo + 1);
-    } else {
-        konfirmasiSubmit();
-    }
+    if (currentNo < TOTAL_SOAL) tampilSoal(currentNo + 1);
+    else konfirmasiSubmit();
 }
 
 function prevSoal() {
@@ -597,21 +701,54 @@ function prevSoal() {
 function updateNavBtn() {
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
-    if (btnPrev) btnPrev.disabled = (currentNo === 1);
+    if (btnPrev) btnPrev.disabled = currentNo === 1;
     if (btnNext) btnNext.textContent = currentNo === TOTAL_SOAL
-        ? 'Selesai & kirim jawaban'
+        ? 'Periksa & selesaikan →'
         : 'Selanjutnya →';
 }
 
-// Override scrollToSoal agar pakai one-page mode
-function scrollToSoal(no) { tampilSoal(no); }
+function lompatKeBelumDijawab() {
+    if (!allCards.length) return;
+    // Cari dari soal setelah posisi saat ini, lalu lanjutkan dari awal jika perlu.
+    for (let offset = 1; offset <= TOTAL_SOAL; offset++) {
+        const no = ((currentNo - 1 + offset) % TOTAL_SOAL) + 1;
+        const soalId = allCards[no - 1].id.replace('card-', '');
+        if (!answeredIds.has(soalId)) {
+            tampilSoal(no);
+            return;
+        }
+    }
+    konfirmasiSubmit();
+}
 
-let sisaDetik  = <?= $sisa_detik_awal ?>; // dihitung dari SERVER, bukan durasi penuh
+const selectMateri = document.getElementById('select-materi');
+if (selectMateri) {
+    selectMateri.addEventListener('change', function () {
+        tampilSoal(parseInt(this.value, 10));
+    });
+}
+
+document.querySelectorAll('.question-number').forEach(button => {
+    button.addEventListener('click', function () {
+        const no = Number(this.dataset.questionNo);
+        if (no > 0) tampilSoal(no);
+    });
+});
+
+
+let sisaDetik  = <?= $sisa_detik_awal ?>; // timer tetap mengikuti durasi yang diatur admin
 let elapsedDtk = 0;
 let tabCount   = 0;
-let answered = <?= count(array_filter($jawaban_tersimpan, fn($v) => $v !== null)) ?>;
 
-// Inisialisasi — tampilkan soal pertama & update progress
+// Progres menampilkan materi yang sedang dikerjakan agar peserta fokus pada satu bagian.
+// Semua jawaban tetap dilacak secara global untuk fitur mencari soal yang belum dijawab.
+function updateProgress() {
+    answered = answeredIds.size;
+    const paletteCount = document.getElementById('palette-total-count');
+    if (paletteCount) paletteCount.textContent = answered + '/' + TOTAL_SOAL;
+}
+
+// Inisialisasi state tampilan untuk soal pertama.
 tampilSoal(1);
 updateProgress();
 
@@ -645,67 +782,76 @@ function autoSubmit() {
 
 // ── PILIH JAWABAN ─────────────────────────────────────────
 function pilihJawaban(soalId, opt) {
+    const card = document.getElementById('card-' + soalId);
+    if (!card) return;
+
     ['A','B','C','D'].forEach(o => {
         const btn = document.getElementById('btn-' + soalId + '-' + o);
         const inp = document.getElementById('r-' + soalId + '-' + o);
-        btn.classList.remove('selected');
-        const ltr = btn.querySelector('.jwb-letter');
-        ltr.style.background = '';
-        ltr.style.color = '';
-        inp.checked = false;
+        if (btn) btn.classList.remove('selected');
+        if (inp) inp.checked = false;
     });
 
     const selBtn = document.getElementById('btn-' + soalId + '-' + opt);
     const selInp = document.getElementById('r-' + soalId + '-' + opt);
+    if (!selBtn || !selInp) return;
+
     selBtn.classList.add('selected');
-    selBtn.querySelector('.jwb-letter').style.background = 'var(--accent)';
-    selBtn.querySelector('.jwb-letter').style.color = '#fff';
     selInp.checked = true;
+    answeredIds.add(String(soalId));
+    updateProgress();
+    updateQuestionPalette();
 
-    // Tandai grid nomor soal
-    const card = document.getElementById('card-' + soalId);
-    const noGlobal = parseInt(card.dataset.no || card.getAttribute('data-no'));
-
-    // Cari nomor global dari posisi di soal_arr
-    const allCards = document.querySelectorAll('.soal-card');
-    let cardNo = 0;
-    allCards.forEach((c, idx) => {
-        if (c.id === 'card-' + soalId) cardNo = idx + 1;
-    });
-
-    if (cardNo > 0) {
-        const gBtn = document.getElementById('gnum-' + cardNo);
-        if (gBtn && !gBtn.classList.contains('answered')) {
-            gBtn.classList.remove('unanswered');
-            gBtn.classList.add('answered');
-            answered++;
-            updateProgress();
-        }
+    const saveStatus = document.getElementById('autosave-status');
+    if (saveStatus) {
+        saveStatus.textContent = 'Menyimpan jawaban…';
+        saveStatus.className = 'exam-save-status is-saving';
     }
-
-    // Auto-save jawaban ke server (tidak menunggu submit akhir)
     simpanJawabanKeServer(soalId, opt);
 
-    // Auto-advance ke soal berikutnya, KECUALI sudah di soal terakhir
-    if (cardNo > 0 && cardNo < TOTAL_SOAL) {
-        tampilSoal(cardNo + 1);
+    // Beri jeda singkat agar pilihan terlihat, lalu pindah otomatis.
+    // Soal terakhir tidak mengirim ujian otomatis supaya peserta masih dapat meninjau jawaban.
+    const answeredNo = Number(card.dataset.no);
+    if (autoAdvanceTimer) clearTimeout(autoAdvanceTimer);
+    if (answeredNo < TOTAL_SOAL) {
+        autoAdvanceTimer = setTimeout(() => {
+            autoAdvanceTimer = null;
+            // Jangan memindahkan posisi jika peserta sudah memilih navigasi lain.
+            if (currentNo === answeredNo) tampilSoal(answeredNo + 1);
+        }, 220);
+    } else if (saveStatus) {
+        saveStatus.textContent = 'Soal terakhir dipilih. Periksa kembali jawaban sebelum menyelesaikan ujian.';
+        saveStatus.className = 'exam-save-status';
     }
 }
-
 function simpanJawabanKeServer(soalId, jawaban) {
     fetch('<?= url('/peserta/simpan_jawaban.php') ?>', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sesi_id: SESI_ID, soal_id: soalId, jawaban: jawaban })
-    }).catch(() => {
-        // Diamkan kalau gagal — jangan ganggu pengalaman ujian peserta,
-        // jawaban tetap ada di form untuk dikirim ulang saat submit akhir
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Autosave gagal');
+        return response.json();
+    })
+    .then(data => {
+        const saveStatus = document.getElementById('autosave-status');
+        if (!saveStatus) return;
+        if (data && data.ok) {
+            saveStatus.textContent = 'Jawaban tersimpan otomatis';
+            saveStatus.className = 'exam-save-status is-saved';
+        } else {
+            saveStatus.textContent = 'Jawaban belum tersinkron. Jawaban tetap akan dikirim saat ujian diselesaikan.';
+            saveStatus.className = 'exam-save-status is-error';
+        }
+    })
+    .catch(() => {
+        const saveStatus = document.getElementById('autosave-status');
+        if (saveStatus) {
+            saveStatus.textContent = 'Koneksi autosave terputus. Jawaban tetap tersedia di halaman ini.';
+            saveStatus.className = 'exam-save-status is-error';
+        }
     });
-}
-
-
-function updateProgress() {
-    document.getElementById('answered-count').textContent = answered;
 }
 
 // ── SUBMIT ─────────────────────────────────────────────────

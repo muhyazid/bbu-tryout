@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jam1  = $_POST['jam_mulai'];
     $jam2  = $_POST['jam_selesai'];
     $dur   = (int)$_POST['durasi_menit'];
-    $jml   = (int)$_POST['jumlah_soal'];
+    $jml   = (int)($_POST['jumlah_soal'] ?? 50);
     $mode  = $_POST['mode'];
 
     if ($id > 0) {
@@ -106,7 +106,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $show_form = (($_GET['action'] ?? '') === 'tambah' || $edit);
 $list = $conn->query("
-    SELECT s.*, pp.nama AS paket_nama
+    SELECT s.*, pp.nama AS paket_nama,
+           (SELECT COUNT(DISTINCT so.id)
+            FROM soal so
+            JOIN paket_kategori pk ON pk.kategori_id = so.kategori_id
+            WHERE pk.paket_id = s.paket_id) AS total_soal_paket
     FROM sesi_ujian s
     JOIN paket_program pp ON s.paket_id = pp.id
     ORDER BY s.tanggal DESC, s.jam_mulai DESC
@@ -143,182 +147,227 @@ include __DIR__ . '/partials/layout-start.php';
     <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <!-- FORM -->
-    <?php if ($show_form): ?>
-    <div class="card" style="margin-bottom:20px;">
-      <div class="card-header">
-        <h3><?= $edit ? 'Edit sesi' : 'Buat sesi ujian baru' ?></h3>
-        <a href="sesi.php" class="link-muted">Tutup</a>
+    <div class="pk-hero">
+      <div class="pk-hero-teks">
+        <h2>Sesi Ujian</h2>
+        <p>Atur jadwal, durasi, dan mode ujian. Sesi aktif dengan tanggal hari ini akan tampil ke peserta.</p>
       </div>
-      <div class="card-body">
-        <form method="POST">
-          <input type="hidden" name="id" value="<?= $edit['id'] ?? 0 ?>">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-
-            <div style="grid-column:1/-1;">
-              <label class="form-label">Nama Sesi *</label>
-              <input type="text" name="nama_sesi" class="form-input"
-                     placeholder="Contoh: CAT Hari 1 — SOU Angkatan 2024-I"
-                     value="<?= htmlspecialchars($edit['nama_sesi'] ?? '') ?>" required>
-            </div>
-
-            <div>
-              <label class="form-label">Program *</label>
-              <select name="paket_id" class="form-input">
-                <?php
-                $opt_paket = $conn->query("SELECT id, nama FROM paket_program ORDER BY urutan");
-                while ($op = $opt_paket->fetch_assoc()):
-                ?>
-                <option value="<?= (int)$op['id'] ?>" <?= (int)($edit['paket_id'] ?? 0) === (int)$op['id'] ? 'selected' : '' ?>>
-                  <?= e($op['nama']) ?>
-                </option>
-                <?php endwhile; ?>
-              </select>
-            </div>
-
-            <div>
-              <label class="form-label">Mode *</label>
-              <select name="mode" class="form-input">
-                <option value="latihan" <?= ($edit['mode'] ?? '') === 'latihan' ? 'selected' : '' ?>>Latihan (boleh browsing)</option>
-                <option value="ujian"   <?= ($edit['mode'] ?? '') === 'ujian'   ? 'selected' : '' ?>>Ujian (ketat)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="form-label">Tanggal *</label>
-              <input type="date" name="tanggal" class="form-input"
-                     value="<?= $edit['tanggal'] ?? date('Y-m-d') ?>" required>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <div>
-                <label class="form-label">Jam Mulai *</label>
-                <input type="time" name="jam_mulai" class="form-input"
-                       value="<?= isset($edit['jam_mulai']) ? substr($edit['jam_mulai'], 0, 5) : '00:00' ?>" required>
-              </div>
-              <div>
-                <label class="form-label">Jam Selesai *</label>
-                <input type="time" name="jam_selesai" class="form-input"
-                       value="<?= isset($edit['jam_selesai']) ? substr($edit['jam_selesai'], 0, 5) : '23:59' ?>" required>
-              </div>
-            </div>
-
-            <div>
-              <label class="form-label">Durasi Ujian (menit) *</label>
-              <input type="number" name="durasi_menit" class="form-input"
-                     min="5" max="300" placeholder="60"
-                     value="<?= $edit['durasi_menit'] ?? 60 ?>" required>
-              <small style="color:var(--text-muted);font-size:12px;">Timer akan otomatis submit saat habis</small>
-            </div>
-
-            <div>
-              <label class="form-label">Jumlah Soal *</label>
-              <input type="number" name="jumlah_soal" class="form-input"
-                     min="1" max="200" placeholder="50"
-                     value="<?= $edit['jumlah_soal'] ?? 50 ?>" required>
-              <small style="color:var(--text-muted);font-size:12px;">Diambil acak dari bank soal</small>
-            </div>
-
-            <div style="grid-column:1/-1;padding:12px 14px;background:#eff6ff;border-radius:8px;font-size:13px;color:#1e40af;line-height:1.5;">
-              <strong>Agar peserta bisa melihat ujian:</strong> status <em>Aktif</em>, tanggal = hari ini,
-              program sama dengan peserta (SOU/GMDSS). Default jam 00:00–23:59 = seharian.
-            </div>
-
-          </div>
-          <div style="display:flex;gap:10px;">
-            <button type="submit" class="btn-primary">Simpan sesi</button>
-            <a href="sesi.php" class="btn-secondary">Batal</a>
-          </div>
-        </form>
-      </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- TABEL SESI -->
-    <div class="card">
-      <div class="card-header">
-      <h3>Daftar sesi ujian</h3>
-      <a href="sesi.php?action=tambah" class="btn-admin-primary btn-sm">
-        <?= admin_icon('plus') ?> Buat sesi baru
+      <a href="<?= url('/admin/sesi.php?action=tambah') ?>" class="ps-tambah">
+        <i class="fas fa-plus"></i> Buat sesi baru
       </a>
     </div>
-      <?php if ($list->num_rows > 0): ?>
-      <table>
-        <thead>
-          <tr>
-            <th>Nama Sesi</th>
-            <th>Program</th>
-            <th>Jadwal</th>
-            <th>Durasi / Soal</th>
-            <th>Mode</th>
-            <th>Status</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-        <?php
-        $hari_ini = date('Y-m-d');
-        while ($s = $list->fetch_assoc()):
-            $tampil_peserta = ($s['status'] === 'aktif' && $s['tanggal'] === $hari_ini);
-        ?>
-          <tr>
-            <td style="font-weight:500;">
+
+    <!-- FORM -->
+    <?php if ($show_form): ?>
+    <section class="pk-panel ss-form" id="ss-form">
+      <header class="pk-panel-head">
+        <div class="pk-panel-judul">
+          <h2><?= $edit ? 'Edit sesi ujian' : 'Buat sesi ujian baru' ?></h2>
+          <p>Isi informasi di bawah. Pratinjau di sebelah kanan menunjukkan apa yang akan dilihat peserta.</p>
+        </div>
+        <a href="<?= url('/admin/sesi.php') ?>" class="ps-tutup">Tutup</a>
+      </header>
+
+      <form method="POST" class="ss-form-body">
+        <input type="hidden" name="id" value="<?= $edit['id'] ?? 0 ?>">
+        <input type="hidden" name="jumlah_soal" value="<?= (int)($edit['jumlah_soal'] ?? 50) ?>">
+
+        <div class="ss-layout">
+
+          <div class="ss-main">
+
+            <div class="ss-bagian">
+              <div class="ss-bagian-head"><span class="ss-nomor">1</span> Informasi sesi</div>
+
+              <div class="ss-field">
+                <label class="ss-label" for="ss-nama">Nama sesi</label>
+                <input id="ss-nama" type="text" name="nama_sesi" class="ss-input"
+                       placeholder="Contoh: CAT Hari 1, SOU Angkatan 2024-I"
+                       value="<?= htmlspecialchars($edit['nama_sesi'] ?? '') ?>" required>
+              </div>
+
+              <div class="ss-dua">
+                <div class="ss-field">
+                  <label class="ss-label" for="ss-paket">Program</label>
+                  <select id="ss-paket" name="paket_id" class="ss-input">
+                    <?php
+                    $opt_paket = $conn->query("
+                        SELECT pp.id, pp.nama, COUNT(DISTINCT so.id) AS total_soal
+                        FROM paket_program pp
+                        LEFT JOIN paket_kategori pk ON pk.paket_id = pp.id
+                        LEFT JOIN soal so ON so.kategori_id = pk.kategori_id
+                        GROUP BY pp.id, pp.nama, pp.urutan
+                        ORDER BY pp.urutan
+                    ");
+                    while ($op = $opt_paket->fetch_assoc()):
+                    ?>
+                    <option value="<?= (int)$op['id'] ?>" <?= (int)($edit['paket_id'] ?? 0) === (int)$op['id'] ? 'selected' : '' ?>>
+                      <?= e($op['nama']) ?> (<?= (int)$op['total_soal'] ?> soal)
+                    </option>
+                    <?php endwhile; ?>
+                  </select>
+                </div>
+
+                <div class="ss-field">
+                  <label class="ss-label" for="ss-mode">Mode</label>
+                  <select id="ss-mode" name="mode" class="ss-input">
+                    <option value="latihan" <?= ($edit['mode'] ?? '') === 'latihan' ? 'selected' : '' ?>>Latihan (boleh browsing)</option>
+                    <option value="ujian"   <?= ($edit['mode'] ?? '') === 'ujian'   ? 'selected' : '' ?>>Ujian (ketat)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="ss-bagian">
+              <div class="ss-bagian-head"><span class="ss-nomor">2</span> Jadwal</div>
+
+              <div class="ss-tiga">
+                <div class="ss-field">
+                  <label class="ss-label" for="ss-tgl">Tanggal</label>
+                  <input id="ss-tgl" type="date" name="tanggal" class="ss-input"
+                         value="<?= $edit['tanggal'] ?? date('Y-m-d') ?>" required>
+                </div>
+                <div class="ss-field">
+                  <label class="ss-label" for="ss-mulai">Jam mulai</label>
+                  <input id="ss-mulai" type="time" name="jam_mulai" class="ss-input"
+                         value="<?= isset($edit['jam_mulai']) ? substr($edit['jam_mulai'], 0, 5) : '00:00' ?>" required>
+                </div>
+                <div class="ss-field">
+                  <label class="ss-label" for="ss-selesai">Jam selesai</label>
+                  <input id="ss-selesai" type="time" name="jam_selesai" class="ss-input"
+                         value="<?= isset($edit['jam_selesai']) ? substr($edit['jam_selesai'], 0, 5) : '23:59' ?>" required>
+                </div>
+              </div>
+              <p class="ss-catatan-kecil">Jam 00:00 sampai 23:59 berarti sesi terbuka sepanjang hari.</p>
+            </div>
+
+            <div class="ss-bagian">
+              <div class="ss-bagian-head"><span class="ss-nomor">3</span> Waktu mengerjakan</div>
+
+              <div class="ss-field ss-field-kecil">
+                <label class="ss-label" for="ss-durasi">Durasi (menit)</label>
+                <input id="ss-durasi" type="number" name="durasi_menit" class="ss-input"
+                       min="5" max="1440" placeholder="60"
+                       value="<?= $edit['durasi_menit'] ?? 60 ?>" required>
+                <p class="ss-catatan-kecil">Berlaku untuk seluruh soal. Saat waktu habis, jawaban dikirim otomatis.</p>
+              </div>
+            </div>
+
+          </div>
+
+          <aside class="ss-pratinjau" aria-label="Pratinjau">
+            <div class="ss-pratinjau-judul">Pratinjau untuk peserta</div>
+            <div class="ss-pratinjau-kartu">
+              <div class="ss-pr-status" id="pr-status">Aktif</div>
+              <div class="ss-pr-nama" id="pr-nama">Nama sesi</div>
+              <dl class="ss-pr-daftar">
+                <div><dt>Program</dt><dd id="pr-paket">-</dd></div>
+                <div><dt>Tanggal</dt><dd id="pr-tgl">-</dd></div>
+                <div><dt>Jam</dt><dd id="pr-jam">-</dd></div>
+                <div><dt>Durasi</dt><dd id="pr-durasi">-</dd></div>
+                <div><dt>Mode</dt><dd id="pr-mode">-</dd></div>
+              </dl>
+            </div>
+            <p class="ss-pr-catatan">
+              Sesi tampil ke peserta hanya jika statusnya <strong>Aktif</strong> dan tanggalnya hari ini.
+            </p>
+          </aside>
+
+        </div>
+
+        <div class="ss-aksi">
+          <a href="<?= url('/admin/sesi.php') ?>" class="ss-btn-batal">Batal</a>
+          <button type="submit" class="ss-btn-simpan">
+            <i class="fas fa-check"></i> Simpan sesi
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <script>
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      function formatTgl(v) {
+        if (!v) return '-';
+        var d = new Date(v + 'T00:00:00');
+        return isNaN(d) ? '-' : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      }
+      function perbarui() {
+        $('pr-nama').textContent  = $('ss-nama').value.trim() || 'Nama sesi';
+        var pilih = $('ss-paket').options[$('ss-paket').selectedIndex];
+        $('pr-paket').textContent = pilih ? pilih.textContent.replace(/\s*\(\d+ soal\)/, '').trim() : '-';
+        $('pr-tgl').textContent   = formatTgl($('ss-tgl').value);
+        var m = $('ss-mulai').value || '--:--', s = $('ss-selesai').value || '--:--';
+        $('pr-jam').textContent   = m + ' – ' + s;
+        var dur = parseInt($('ss-durasi').value, 10);
+        $('pr-durasi').textContent = isNaN(dur) ? '-' : dur + ' menit';
+        $('pr-mode').textContent  = $('ss-mode').value === 'ujian' ? 'Ujian (ketat)' : 'Latihan';
+      }
+      document.querySelectorAll('#ss-form input, #ss-form select').forEach(function (el) {
+        el.addEventListener('input', perbarui);
+        el.addEventListener('change', perbarui);
+      });
+      perbarui();
+    })();
+    </script>
+    <?php endif; ?>
+
+    <!-- DAFTAR SESI -->
+    <?php if ($list->num_rows > 0): ?>
+    <ul class="ps-list">
+      <?php
+      $hari_ini = date('Y-m-d');
+      while ($s = $list->fetch_assoc()):
+          $aktif          = $s['status'] === 'aktif';
+          $tampil_peserta = ($aktif && $s['tanggal'] === $hari_ini);
+          $tujuan         = $aktif ? 'nonaktif' : 'aktif';
+      ?>
+      <li class="ps-row">
+        <div class="ps-row-link ps-row-statis">
+          <a href="#" class="kl-status <?= $aktif ? 'berjalan' : 'ss-nonaktif' ?> ss-toggle"
+             title="<?= $aktif ? 'Nonaktifkan sesi' : 'Aktifkan sesi' ?>"
+             onclick="konfirmasiToggle(<?= (int)$s['id'] ?>, '<?= $tujuan ?>', '<?= htmlspecialchars(addslashes($s['nama_sesi'])) ?>'); return false;">
+            <span class="kl-titik"></span><?= $aktif ? 'Aktif' : 'Nonaktif' ?>
+          </a>
+
+          <span class="ps-info">
+            <span class="ps-nama">
               <?= htmlspecialchars($s['nama_sesi']) ?>
               <?php if ($tampil_peserta): ?>
-              <span class="badge badge-aktif" style="margin-left:6px;font-size:10px;">Tampil ke peserta</span>
+              <span class="ss-tampil">Tampil ke peserta</span>
               <?php endif; ?>
-            </td>
-            <td><span class="badge badge-paket"><?= e($s['paket_nama']) ?></span></td>
-            <td style="font-size:13px;">
-              <?= date('d M Y', strtotime($s['tanggal'])) ?><br>
-              <span style="color:var(--text-muted);">
-                <?= substr($s['jam_mulai'],0,5) ?> – <?= substr($s['jam_selesai'],0,5) ?>
-              </span>
-            </td>
-            <td style="font-size:13px;">
-              <?= (int)$s['durasi_menit'] ?> menit<br>
-              <span style="color:var(--text-muted);"><?= (int)$s['jumlah_soal'] ?> soal</span>
-            </td>
-            <td>
-              <span class="badge badge-<?= $s['mode'] ?>">
-                <?= $s['mode'] === 'ujian' ? 'Ujian' : 'Latihan' ?>
-              </span>
-            </td>
-            <td>
-              <a href="#"
-                class="<?= $s['status'] === 'aktif' ? 'toggle-on' : 'toggle-off' ?>"
-                onclick="konfirmasiToggle(<?= (int)$s['id'] ?>, '<?= $s['status'] === 'aktif' ? 'nonaktif' : 'aktif' ?>', '<?= htmlspecialchars(addslashes($s['nama_sesi'])) ?>'); return false;">
-                <?= $s['status'] === 'aktif' ? '● Aktif' : '○ Nonaktif' ?>
-              </a>
-            </td>
-
-            <td>
-              <div class="action-buttons">
-                <a href="sesi.php?edit=<?= $s['id'] ?>" 
-                  class="btn-icon btn-icon-edit" 
-                  data-tooltip="Edit sesi">
-                  <i class="fas fa-pen"></i>
-                </a>
-                <a href="sesi.php?hapus=<?= $s['id'] ?>" 
-                  class="btn-icon btn-icon-delete" 
-                  data-tooltip="Hapus sesi"
-                  onclick="return confirm('Hapus sesi <?= htmlspecialchars(addslashes($s['nama_sesi'])) ?>?')">
-                  <i class="fas fa-trash-alt"></i>
-                </a>
-              </div>
-            </td>
-          </tr>
-        <?php endwhile; ?>
-        </tbody>
-      </table>
-      <?php else: ?>
-        <div class="empty-state">
-          <p><strong>Belum ada sesi ujian</strong></p>
-          <p>Gunakan tombol <strong>Buat sesi baru</strong> di atas untuk membuat jadwal ujian.</p>
+            </span>
+            <span class="ps-chips">
+              <span class="ps-chip ps-chip-paket"><?= e($s['paket_nama']) ?></span>
+              <span class="ps-chip ss-chip-<?= $s['mode'] ?>"><?= $s['mode'] === 'ujian' ? 'Ujian' : 'Latihan' ?></span>
+            </span>
+            <span class="ps-meta">
+              <?= date('d M Y', strtotime($s['tanggal'])) ?> · <?= substr($s['jam_mulai'],0,5) ?>–<?= substr($s['jam_selesai'],0,5) ?>
+              · <?= (int)$s['durasi_menit'] ?> menit
+              · <?= number_format((int)$s['total_soal_paket'], 0, ',', '.') ?> soal tersedia
+            </span>
+          </span>
         </div>
-      <?php endif; ?>
+
+        <div class="ps-aksi">
+          <a class="ps-ikon" title="Edit sesi" href="<?= url('/admin/sesi.php?edit=' . (int)$s['id']) ?>">
+            <i class="fas fa-pen"></i>
+          </a>
+          <a class="ps-ikon ps-ikon-hapus" title="Hapus sesi"
+             href="<?= url('/admin/sesi.php?hapus=' . (int)$s['id']) ?>"
+             onclick="return confirm('Hapus sesi <?= htmlspecialchars(addslashes($s['nama_sesi'])) ?>?')">
+            <i class="fas fa-trash"></i>
+          </a>
+        </div>
+      </li>
+      <?php endwhile; ?>
+    </ul>
+    <?php else: ?>
+    <div class="empty-state">
+      <p><strong>Belum ada sesi ujian</strong></p>
+      <p>Klik <strong>Buat sesi baru</strong> di atas untuk membuat jadwal ujian.</p>
     </div>
-    
+    <?php endif; ?>
 
     <!-- Modal konfirmasi toggle status -->
     <div class="modal-overlay" id="modal-toggle-status">
@@ -410,5 +459,6 @@ function cekKonfirmasiSesi() {
 }
 </script>
 <?php endif; ?>
+
 
 <?php include __DIR__ . '/partials/layout-end.php'; ?>

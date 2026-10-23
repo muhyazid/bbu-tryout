@@ -111,7 +111,7 @@ include __DIR__ . '/partials/layout-start.php';
         <div class="status-meta">
             <span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <?= (int)$sesi['jumlah_soal'] ?> soal
+                Materi lengkap sesuai paket
             </span>
             <span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -178,6 +178,7 @@ include __DIR__ . '/partials/layout-start.php';
                     <th>Nilai</th>
                     <th>Benar / total</th>
                     <th>Tanggal</th>
+                    <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -204,7 +205,6 @@ include __DIR__ . '/partials/layout-start.php';
                     <td data-label="Tanggal">
                         <?= date('d M Y', strtotime($r['submitted_at'])) ?>
                     </td>
-                    <th>Aksi</th>
                     <td data-label="Aksi">
                         <a href="<?= url('/review.php?hasil_id=' . $r['id']) ?>" target="_blank" class="btn-link">
                             Lihat review

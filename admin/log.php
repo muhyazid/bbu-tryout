@@ -51,184 +51,150 @@ $log_labels = [
     'logout'            => 'Logout',
 ];
 
-$extra_head = <<<'HTML'
-<style>
-.log-tab{background:#fef2f2;color:#b91c1c}
-.log-fs{background:#fef3c7;color:#92400e}
-.log-submit{background:#e6f4ec;color:#166534}
-.log-login{background:#e8f0fe;color:#1a3c6e}
-.log-logout{background:#f1f5f9;color:#64748b}
-.log-badge{padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600}
-</style>
-HTML;
 $topbar_breadcrumb = 'Log Aktivitas';
 $topbar_title      = 'Log Aktivitas';
 
 include __DIR__ . '/partials/layout-start.php';
 ?>
 
-    <!-- RINGKASAN KECURANGAN -->
-    <?php if ($ringkasan->num_rows > 0): ?>
-    <div class="card" style="margin-bottom:20px;">
-      <div class="card-header">
-        <h3>Peserta perlu perhatian</h3>
-        <span style="font-size:12px;color:var(--text-muted);">Diurutkan dari terbanyak</span>
+    <div class="pk-hero">
+      <div class="pk-hero-teks">
+        <h2>Log Aktivitas</h2>
+        <p>Catatan aktivitas peserta selama ujian. Gunakan untuk memantau, lalu tindak lanjuti sesuai kebijakan.</p>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Peserta</th>
-            <th>Sesi</th>
-            <th style="text-align:center;">Pindah Tab</th>
-            <th style="text-align:center;">Keluar Fullscreen</th>
-            <th style="text-align:center;">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-        <?php while ($r = $ringkasan->fetch_assoc()):
-            $total_sus = $r['tab'] + $r['fs'];
-            $warna = $total_sus >= 5 ? 'var(--danger)' : ($total_sus >= 2 ? 'var(--warning)' : 'var(--success)');
-        ?>
-          <tr>
-            <td>
-              <div style="font-weight:600;"><?= htmlspecialchars($r['nama']) ?></div>
-              <code style="font-size:12px;background:#f0f2f5;padding:1px 6px;border-radius:4px;">
-                <?= htmlspecialchars($r['nomor_peserta']) ?>
-              </code>
-            </td>
-            <td style="font-size:13px;color:var(--text-muted);">
-              <?= htmlspecialchars($r['nama_sesi']) ?>
-            </td>
-            <td style="text-align:center;">
-              <span style="font-size:18px;font-weight:700;color:<?= $r['tab']>0 ? '#c0392b' : 'var(--text-muted)' ?>">
-                <?= $r['tab'] ?>x
-              </span>
-            </td>
-            <td style="text-align:center;">
-              <span style="font-size:18px;font-weight:700;color:<?= $r['fs']>0 ? '#856404' : 'var(--text-muted)' ?>">
-                <?= $r['fs'] ?>x
-              </span>
-            </td>
-            <td style="text-align:center;">
-              <span style="font-size:20px;font-weight:800;color:<?= $warna ?>;">
-                <?= $total_sus ?>x
-              </span>
-            </td>
-          </tr>
-        <?php endwhile; ?>
-        </tbody>
-      </table>
+      <a href="<?= url('/admin/log.php') ?>" class="ps-tambah">
+        <i class="fas fa-rotate-right"></i> Muat ulang
+      </a>
     </div>
+
+    <?php if ($ringkasan->num_rows > 0): ?>
+    <section class="pk-panel lg-perhatian">
+      <header class="pk-panel-head">
+        <div class="pk-panel-judul">
+          <h2>Perlu perhatian</h2>
+          <p>Peserta dengan aktivitas keluar halaman atau layar penuh terbanyak, diurutkan dari yang tertinggi.</p>
+        </div>
+      </header>
+
+      <ul class="ps-list lg-list">
+        <?php
+        $warna_daftar = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777'];
+        while ($r = $ringkasan->fetch_assoc()):
+            $total_sus = (int)$r['tab'] + (int)$r['fs'];
+            $tingkat   = $total_sus >= 5 ? 'tinggi' : ($total_sus >= 2 ? 'sedang' : 'rendah');
+            $inisial   = mb_strtoupper(mb_substr(trim($r['nama']), 0, 2));
+            $warna     = $warna_daftar[crc32($r['nomor_peserta']) % 6];
+        ?>
+        <li class="ps-row">
+          <div class="ps-row-link ps-row-statis lg-row-perhatian">
+            <span class="pk-avatar" style="--warna: <?= $warna ?>"><?= htmlspecialchars($inisial) ?></span>
+            <span class="ps-info">
+              <span class="ps-nama"><?= htmlspecialchars($r['nama']) ?></span>
+              <span class="ps-chips">
+                <span class="ps-chip ps-chip-nomor"><?= htmlspecialchars($r['nomor_peserta']) ?></span>
+                <span class="lg-sesi-teks"><?= htmlspecialchars($r['nama_sesi']) ?></span>
+              </span>
+            </span>
+            <span class="lg-stat">
+              <span class="lg-stat-angka <?= (int)$r['tab'] > 0 ? 'ada' : '' ?>"><?= (int)$r['tab'] ?></span>
+              <span class="lg-stat-label">Pindah tab</span>
+            </span>
+            <span class="lg-stat">
+              <span class="lg-stat-angka <?= (int)$r['fs'] > 0 ? 'ada' : '' ?>"><?= (int)$r['fs'] ?></span>
+              <span class="lg-stat-label">Keluar layar penuh</span>
+            </span>
+            <span class="lg-total lg-total-<?= $tingkat ?>"><?= $total_sus ?>x</span>
+          </div>
+        </li>
+        <?php endwhile; ?>
+      </ul>
+    </section>
     <?php endif; ?>
 
-    <!-- FILTER -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-body" style="padding:16px;">
-        <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-          <div>
-            <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Peserta</div>
-            <select name="peserta_id" class="form-input" style="width:190px;">
-              <option value="">Semua Peserta</option>
-              <?php while ($p = $peserta_opt->fetch_assoc()): ?>
-              <option value="<?= $p['id'] ?>" <?= $fp==$p['id'] ? 'selected' : '' ?>>
-                <?= htmlspecialchars($p['nama']) ?>
-              </option>
-              <?php endwhile; ?>
-            </select>
-          </div>
-          <div>
-            <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Jenis Aktivitas</div>
-            <select name="jenis" class="form-input">
-              <option value="">Semua</option>
-              <option value="pindah_tab"        <?= $fj==='pindah_tab'        ? 'selected' : '' ?>>Pindah tab</option>
-              <option value="keluar_fullscreen"  <?= $fj==='keluar_fullscreen'  ? 'selected' : '' ?>>Keluar layar penuh</option>
-              <option value="submit"             <?= $fj==='submit'             ? 'selected' : '' ?>>Submit ujian</option>
-              <option value="login"              <?= $fj==='login'              ? 'selected' : '' ?>>Login</option>
-            </select>
-          </div>
-          <div>
-            <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Sesi</div>
-            <select name="sesi_id" class="form-input" style="width:200px;">
-              <option value="">Semua Sesi</option>
-              <?php while ($so = $sesi_opt->fetch_assoc()): ?>
-              <option value="<?= $so['id'] ?>" <?= $fs==$so['id'] ? 'selected' : '' ?>>
-                <?= htmlspecialchars($so['nama_sesi']) ?>
-              </option>
-              <?php endwhile; ?>
-            </select>
-          </div>
-          <button type="submit" class="btn-primary" style="padding:9px 18px;">Filter</button>
-          <a href="log.php"
-             style="color:var(--text-muted);font-size:13px;text-decoration:none;
-                    padding:9px 14px;border:1px solid var(--border);
-                    border-radius:8px;background:#f8f9fa;">
-            Reset
-          </a>
-        </form>
+    <form method="GET" class="lg-filter" role="search">
+      <div class="lg-field">
+        <label for="lg-peserta">Peserta</label>
+        <select id="lg-peserta" name="peserta_id">
+          <option value="">Semua peserta</option>
+          <?php while ($p = $peserta_opt->fetch_assoc()): ?>
+          <option value="<?= $p['id'] ?>" <?= $fp==$p['id'] ? 'selected' : '' ?>>
+            <?= htmlspecialchars($p['nama']) ?>
+          </option>
+          <?php endwhile; ?>
+        </select>
       </div>
-    </div>
+      <div class="lg-field">
+        <label for="lg-jenis">Jenis aktivitas</label>
+        <select id="lg-jenis" name="jenis">
+          <option value="">Semua</option>
+          <option value="pindah_tab"         <?= $fj==='pindah_tab'         ? 'selected' : '' ?>>Pindah tab</option>
+          <option value="keluar_fullscreen"  <?= $fj==='keluar_fullscreen'  ? 'selected' : '' ?>>Keluar layar penuh</option>
+          <option value="submit"             <?= $fj==='submit'             ? 'selected' : '' ?>>Submit ujian</option>
+          <option value="login"              <?= $fj==='login'              ? 'selected' : '' ?>>Login</option>
+        </select>
+      </div>
+      <div class="lg-field">
+        <label for="lg-sesi">Sesi</label>
+        <select id="lg-sesi" name="sesi_id">
+          <option value="">Semua sesi</option>
+          <?php while ($so = $sesi_opt->fetch_assoc()): ?>
+          <option value="<?= $so['id'] ?>" <?= $fs==$so['id'] ? 'selected' : '' ?>>
+            <?= htmlspecialchars($so['nama_sesi']) ?>
+          </option>
+          <?php endwhile; ?>
+        </select>
+      </div>
+      <div class="lg-aksi">
+        <button type="submit" class="btn-admin-primary pk-btn">Terapkan</button>
+        <a href="<?= url('/admin/log.php') ?>" class="lg-reset">Reset</a>
+      </div>
+    </form>
 
-    <!-- TABEL LOG -->
-    <div class="card">
-      <div class="card-header">
-        <h3>Detail log <span class="count-pill"><?= $logs->num_rows ?> entri</span></h3>
-        <a href="log.php" class="btn-admin-primary" style="font-size:13px;padding:8px 14px;">
-          <i class="fas fa-rotate-right" style="font-size:12px;"></i> Refresh
-        </a>
-      </div>
+    <section class="pk-panel">
+      <header class="pk-panel-head">
+        <div class="pk-panel-judul">
+          <h2>Detail log</h2>
+          <p>Menampilkan maksimal 300 entri terbaru sesuai filter.</p>
+        </div>
+        <span class="lg-jumlah"><?= $logs->num_rows ?> entri</span>
+      </header>
+
       <?php if ($logs->num_rows > 0): ?>
-      <table>
-        <thead>
-          <tr>
-            <th>Waktu</th>
-            <th>Peserta</th>
-            <th>Aktivitas</th>
-            <th>Sesi</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div class="lg-tabel-head" aria-hidden="true">
+        <span>Waktu</span><span>Peserta</span><span>Aktivitas</span><span>Sesi</span>
+      </div>
+      <ul class="lg-log">
         <?php while ($l = $logs->fetch_assoc()):
             $cls = match($l['jenis']) {
-                'pindah_tab'       => 'log-tab',
-                'keluar_fullscreen'=> 'log-fs',
-                'submit'           => 'log-submit',
-                'login'            => 'log-login',
-                default            => 'log-logout'
+                'pindah_tab'        => 'tab',
+                'keluar_fullscreen' => 'fs',
+                'submit'            => 'submit',
+                'login'             => 'login',
+                default             => 'logout'
             };
             $label = $log_labels[$l['jenis']] ?? ucfirst(str_replace('_', ' ', $l['jenis']));
         ?>
-          <tr>
-            <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
-              <?= date('d M Y', strtotime($l['waktu'])) ?><br>
-              <strong style="color:var(--text);font-size:13px;">
-                <?= date('H:i:s', strtotime($l['waktu'])) ?>
-              </strong>
-            </td>
-            <td>
-              <div style="font-weight:600;font-size:14px;">
-                <?= htmlspecialchars($l['nama'] ?? '—') ?>
-              </div>
-              <code style="font-size:11px;background:#f0f2f5;
-                           padding:1px 6px;border-radius:4px;">
-                <?= htmlspecialchars($l['nomor_peserta'] ?? '') ?>
-              </code>
-            </td>
-            <td>
-              <span class="log-badge <?= $cls ?>"><?= htmlspecialchars($label) ?></span>
-            </td>
-            <td style="font-size:13px;color:var(--text-muted);">
-              <?= htmlspecialchars($l['nama_sesi'] ?? '—') ?>
-            </td>
-          </tr>
+        <li class="lg-item">
+          <span class="lg-waktu">
+            <span class="lg-tgl"><?= date('d M Y', strtotime($l['waktu'])) ?></span>
+            <span class="lg-jam"><?= date('H:i:s', strtotime($l['waktu'])) ?></span>
+          </span>
+          <span class="lg-peserta">
+            <span class="lg-peserta-nama"><?= htmlspecialchars($l['nama'] ?? '—') ?></span>
+            <span class="ps-chip ps-chip-nomor"><?= htmlspecialchars($l['nomor_peserta'] ?? '') ?></span>
+          </span>
+          <span><span class="lg-pill lg-<?= $cls ?>"><?= htmlspecialchars($label) ?></span></span>
+          <span class="lg-sesi-teks"><?= htmlspecialchars($l['nama_sesi'] ?? '—') ?></span>
+        </li>
         <?php endwhile; ?>
-        </tbody>
-      </table>
+      </ul>
       <?php else: ?>
       <div class="empty-state">
         <p><strong>Belum ada log aktivitas</strong></p>
         <p>Log akan muncul saat peserta mulai mengerjakan ujian.</p>
       </div>
       <?php endif; ?>
-    </div>
+    </section>
+
 
 <?php include __DIR__ . '/partials/layout-end.php'; ?>

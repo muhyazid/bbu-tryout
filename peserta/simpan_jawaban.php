@@ -17,7 +17,7 @@ if ($sesi_id <= 0 || $soal_id <= 0) {
     exit;
 }
 
-if ($jawaban !== null && !in_array($jawaban, ['A', 'B', 'C', 'D'], true)) {
+if ($jawaban !== null && !in_array($jawaban, OPSI_HURUF, true)) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Jawaban tidak valid']);
     exit;
@@ -43,7 +43,7 @@ if ($cek_sesi->get_result()->num_rows === 0) {
 // Pastikan soal_id ini BENAR bagian dari paket_kategori milik paket peserta,
 // bukan soal_id sembarangan yang dipalsukan dari DevTools
 $stmt = $conn->prepare("
-    SELECT s.jawaban_benar
+    SELECT s.jawaban_benar, s.pilihan_a, s.pilihan_b, s.pilihan_c, s.pilihan_d, s.pilihan_e
     FROM soal s
     JOIN kategori k ON s.kategori_id = k.id
     JOIN paket_kategori pk ON pk.kategori_id = k.id
@@ -57,6 +57,12 @@ $soal = $stmt->get_result()->fetch_assoc();
 if (!$soal) {
     http_response_code(403);
     echo json_encode(['ok' => false, 'error' => 'Soal ini tidak valid untuk paket Anda']);
+    exit;
+}
+// Pilihan harus benar-benar ada untuk soal ini (soal ABCD tidak boleh menerima E)
+if ($jawaban !== null && !array_key_exists($jawaban, opsi_soal($soal))) {
+    http_response_code(400);
+    echo json_encode(['ok' => false, 'error' => 'Pilihan tidak tersedia untuk soal ini']);
     exit;
 }
 

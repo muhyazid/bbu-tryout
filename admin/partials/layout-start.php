@@ -8,7 +8,7 @@
  *   $extra_head        — (opsional) HTML tambahan di <head>
  */
 $admin_page = $admin_page ?? '';
-$page_title = $page_title ?? 'Panel Admin — BBU Tryout';
+$page_title = $page_title ?? 'Panel Admin';
 require_once __DIR__ . '/icons.php';
 
 $nama_admin_tb = $_SESSION['admin_nama'] ?? 'Admin';

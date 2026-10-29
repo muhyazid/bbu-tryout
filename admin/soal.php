@@ -2,7 +2,7 @@
 require_once dirname(__DIR__) . '/config.php';
 cekAdmin();
 
-const BS_KUNCI = ['A', 'B', 'C', 'D'];
+const BS_KUNCI = ['A', 'B', 'C', 'D', 'E'];
 
 function bs_flash(string $tipe, string $msg): void
 {
@@ -30,7 +30,7 @@ $cari_soal   = trim($_GET['q'] ?? '');
 
 $form_kosong = [
     'id' => 0, 'pertanyaan' => '',
-    'pilihan_a' => '', 'pilihan_b' => '', 'pilihan_c' => '', 'pilihan_d' => '',
+    'pilihan_a' => '', 'pilihan_b' => '', 'pilihan_c' => '', 'pilihan_d' => '','pilihan_e' => '',
     'jawaban_benar' => '', 'bobot' => 2,
 ];
 $form         = $form_kosong;
@@ -111,6 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_soal'])) {
         'pilihan_b'     => trim($_POST['pilihan_b'] ?? ''),
         'pilihan_c'     => trim($_POST['pilihan_c'] ?? ''),
         'pilihan_d'     => trim($_POST['pilihan_d'] ?? ''),
+        'pilihan_e'     => trim($_POST['pilihan_e'] ?? ''),
         'jawaban_benar' => strtoupper(trim($_POST['jawaban_benar'] ?? '')),
         'bobot'         => (int) ($_POST['bobot'] ?? 2),
     ];
@@ -121,10 +122,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_soal'])) {
     if ($form['pertanyaan'] === '') {
         $error = 'Pertanyaan wajib diisi.';
     }
-    foreach (BS_KUNCI as $o) {
-        if (!$error && $form['pilihan_' . strtolower($o)] === '') {
-            $error = "Pilihan $o wajib diisi.";
-        }
+    foreach (['A', 'B', 'C', 'D', 'E'] as $o) {
+      if (!$error && $form['pilihan_' . strtolower($o)] === '') {
+          $error = "Pilihan $o wajib diisi.";
+      }
+    }
+    if (!$error && $form['pilihan_e'] !== '' && $form['pilihan_d'] === '') {
+      $error = 'Pilihan E diisi, jadi pilihan D juga harus diisi.';
+    }
+    if (!$error && $form['jawaban_benar'] === 'E' && $form['pilihan_e'] === '') {
+      $error = 'Kunci jawaban E dipilih, tetapi pilihan E kosong.';
     }
     if (!$error && !in_array($form['jawaban_benar'], BS_KUNCI, true)) {
         $error = 'Pilih kunci jawaban.';
@@ -140,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_soal'])) {
         if ($form['id'] > 0) {
             $s = $conn->prepare("
                 UPDATE soal
-                SET kategori_id=?, pertanyaan=?, pilihan_a=?, pilihan_b=?, pilihan_c=?, pilihan_d=?,
+                SET kategori_id=?, pertanyaan=?, pilihan_a=?, pilihan_b=?, pilihan_c=?, pilihan_d=?,pilihan_e=?,
                     jawaban_benar=?, bobot=?
                 WHERE id=?
             ");
@@ -148,11 +155,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_soal'])) {
                            $form['pilihan_c'], $form['pilihan_d'], $form['jawaban_benar'], $form['bobot'], $form['id']);
         } else {
             $s = $conn->prepare("
-                INSERT INTO soal (kategori_id, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, jawaban_benar, bobot)
+                INSERT INTO soal (kategori_id, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d,pilihan_e, jawaban_benar, bobot)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $s->bind_param("issssssi", $kid, $form['pertanyaan'], $form['pilihan_a'], $form['pilihan_b'],
-                           $form['pilihan_c'], $form['pilihan_d'], $form['jawaban_benar'], $form['bobot']);
+                           $form['pilihan_c'], $form['pilihan_d'], $form['pilihan_e'], $form['jawaban_benar'], $form['bobot']);
         }
 
         if ($s->execute()) {
@@ -176,7 +183,7 @@ if (isset($_GET['edit'])) {
         $form = [
             'id' => (int) $row['id'], 'pertanyaan' => $row['pertanyaan'],
             'pilihan_a' => $row['pilihan_a'], 'pilihan_b' => $row['pilihan_b'],
-            'pilihan_c' => $row['pilihan_c'], 'pilihan_d' => $row['pilihan_d'],
+            'pilihan_c' => $row['pilihan_c'], 'pilihan_d' => $row['pilihan_d'],'pilihan_e' => $row['pilihan_e'] ?? '',
             'jawaban_benar' => $row['jawaban_benar'], 'bobot' => (int) $row['bobot'],
         ];
         $materi_id  = (int) $row['kategori_id'];
@@ -209,7 +216,7 @@ unset($_SESSION['flash_msg'], $_SESSION['flash_tipe']);
 
 // ── DATA TAMPILAN ─────────────────────────────────────────
 $admin_page = 'soal';
-$page_title = $materi ? ($materi['nama'] . ' — Bank Soal') : 'Bank Soal — BBU Tryout';
+$page_title = $materi ? ($materi['nama'] . ' - Bank Soal') : 'Bank Soal ';
 $topbar_breadcrumb = $materi ? 'Bank Soal / ' . $materi['nama'] : 'Bank Soal';
 $topbar_title      = $materi ? $materi['nama'] : 'Bank Soal';
 
@@ -318,10 +325,6 @@ include __DIR__ . '/partials/layout-start.php';
         <div class="bs3-stat">
           <strong><?= $total_soal ?></strong>
           <span>Soal</span>
-        </div>
-        <div class="bs3-stat<?= $total_kosong > 0 ? ' bs3-stat-warn' : '' ?>">
-          <strong><?= $total_kosong ?></strong>
-          <span>Belum ada soal</span>
         </div>
       </div>
       <button type="button" class="bs3-tambah" data-buka="bs-modal-materi">
@@ -547,11 +550,12 @@ include __DIR__ . '/partials/layout-start.php';
 
             <div class="bs-pilihan">
               <?php foreach (BS_KUNCI as $o): $k = strtolower($o); ?>
-              <div class="bs-field">
-                <label for="bs-p-<?= $k ?>">Pilihan <?= $o ?></label>
-                <input id="bs-p-<?= $k ?>" type="text" name="pilihan_<?= $k ?>"
-                       value="<?= e($form['pilihan_' . $k]) ?>" required>
-              </div>
+                <div class="bs-field">
+                  <label for="bs-p-<?= $k ?>">Pilihan <?= $o ?><?= $o === 'E' ? ' (opsional)' : '' ?></label>
+                  <input id="bs-p-<?= $k ?>" type="text" name="pilihan_<?= $k ?>"
+                        value="<?= e($form['pilihan_' . $k]) ?>"
+                        <?= $o === 'E' ? '' : 'required' ?>>
+                </div>
               <?php endforeach; ?>
             </div>
 

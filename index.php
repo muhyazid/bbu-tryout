@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#15384F">
-    <title>BBU CAT Tryout | Bharuna Bhakti Utama</title>
+    <title>BBU Tryout</title>
     <link rel="stylesheet" href="<?= url('/assets/css/login.css') ?>">
 </head>
 <body class="login-page">
@@ -65,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="brand-eyebrow">LEMBAGA DIKLAT REOR</p>
             <h1 id="brand-title" class="brand-institution">REOR BHARUNA BHAKTI UTAMA</h1>
             <div class="brand-divider" aria-hidden="true"></div>
-            <h2 class="brand-product">BBU <span>Tryout</span></h2>
             <p class="brand-description">
                 Sistem ujian berbasis komputer untuk latihan dan evaluasi peserta diklat radio maritim.
             </p>
@@ -75,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <section class="form-panel" aria-labelledby="login-title">
         <div class="form-inner">
             <div class="form-heading">
-                <h2 id="login-title">Masuk ke Sistem</h2>
+                <h2 id="login-title">Mulai TryOut</h2>
                 <p class="form-description">Masukkan username dan password yang telah diberikan oleh panitia tryout.</p>
             </div>
 

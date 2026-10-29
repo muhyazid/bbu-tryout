@@ -44,3 +44,21 @@ function hitung_sisa_waktu_detik(array $hasil_ujian_row, int $durasi_menit_total
     $sisa = $durasi_total_detik - $waktu_terpakai;
     return max(0, $sisa); // tidak boleh negatif
 }
+
+const OPSI_HURUF = ['A', 'B', 'C', 'D', 'E'];
+
+/**
+ * Pilihan yang benar-benar terisi untuk satu soal.
+ * Hasil contoh: ['A' => 'teks', 'B' => 'teks', 'C' => 'teks', 'D' => 'teks']
+ */
+function opsi_soal(array $soal): array
+{
+    $hasil = [];
+    foreach (OPSI_HURUF as $h) {
+        $kolom = 'pilihan_' . strtolower($h);
+        if (isset($soal[$kolom]) && trim((string) $soal[$kolom]) !== '') {
+            $hasil[$h] = $soal[$kolom];
+        }
+    }
+    return $hasil;
+}

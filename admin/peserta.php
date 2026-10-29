@@ -161,7 +161,7 @@ $res_paket = $conn->query("SELECT id, nama FROM paket_program ORDER BY urutan");
 while ($row = $res_paket->fetch_assoc()) $daftar_paket[] = $row;
 
 $admin_page = 'peserta';
-$page_title = 'Kelola Peserta — BBU Tryout';
+$page_title = 'Kelola Peserta';
 $topbar_breadcrumb = 'Peserta';
 $topbar_title      = $angkatan_aktif !== null
     ? ($angkatan_aktif === '__tanpa_angkatan__' ? 'Tanpa Angkatan' : $angkatan_aktif)

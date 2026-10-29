@@ -183,7 +183,7 @@ if ($angkatan_aktif) {
 }
 
 $admin_page = 'kelompok';
-$page_title = 'Kelola Kelompok — BBU Tryout';
+$page_title = 'Kelola Kelompok';
 $topbar_breadcrumb = 'Kelola Kelompok';
 $topbar_title      = 'Kelola Kelompok Ujian';
 

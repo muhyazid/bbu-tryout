@@ -42,6 +42,10 @@ if ($is_peserta && (int)$hasil['peserta_id'] !== (int)$_SESSION['peserta_id']) {
 if ($is_peserta && $hasil['status_pengerjaan'] !== 'selesai') {
     redirect('/peserta/dashboard.php');
 }
+// Peserta hanya boleh membuka pembahasan pada hari ujian dilaksanakan
+if ($is_peserta && date('Y-m-d', strtotime($hasil['submitted_at'])) !== date('Y-m-d')) {
+    redirect('/peserta/dashboard.php');
+}
 
 // ── AMBIL JUMLAH MATERI UNTUK PAKET INI ─────────────────────
 // Kalau paket cuma punya 1 materi (misal COC GMDSS) → tampilkan sebagai 1 nilai total
@@ -75,7 +79,7 @@ if ($tampilkan_per_materi) {
 
 // ── AMBIL SEMUA JAWABAN PESERTA + DETAIL SOAL ───────────────
 $stmt2 = $conn->prepare("
-    SELECT j.*, s.pertanyaan, s.pilihan_a, s.pilihan_b, s.pilihan_c, s.pilihan_d,
+    SELECT j.*, s.pertanyaan, s.pilihan_a, s.pilihan_b, s.pilihan_c, s.pilihan_d, s.pilihan_e,
            s.jawaban_benar, s.bobot, k.id AS kategori_id, k.nama AS kategori_nama
     FROM jawaban j
     JOIN soal s ON j.soal_id = s.id
@@ -166,8 +170,7 @@ $page_title = 'Review Jawaban — ' . e($hasil['nama_sesi']);
             <div class="review-soal-text"><?= nl2br(e($j['pertanyaan'])) ?></div>
 
             <div class="review-jwb-list">
-                <?php foreach (['A','B','C','D'] as $opt):
-                    $isi_pilihan = $j['pilihan_' . strtolower($opt)];
+                <?php foreach (opsi_soal($j) as $opt => $isi_pilihan):
                     $ini_kunci   = ($opt === $j['jawaban_benar']);
                     $ini_dipilih = ($opt === $j['jawaban_dipilih']);
 

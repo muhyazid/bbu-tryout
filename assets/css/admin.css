@@ -2621,3 +2621,296 @@ select.ss-input { padding-right: 36px; cursor: pointer; }
   text-decoration: none;
   line-height: 1.2;
 }
+
+/* =========================================
+   REKAP NILAI BBU - CLEAN PROFESSIONAL
+   ========================================= */
+
+.rn-panel {
+    overflow: hidden;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    background: #FFFFFF;
+    box-shadow: 0 5px 18px rgba(15, 35, 65, 0.035);
+}
+
+.rn-panel .pk-panel-head {
+    padding: 22px 24px;
+    border-bottom: 1px solid #E9EEF4;
+    background: linear-gradient(115deg, #FFFFFF 60%, #F4F8FC 100%);
+}
+
+.rn-panel .pk-panel-judul h2 {
+    margin: 0 0 7px;
+    color: #142D4E;
+    font-size: 19px;
+    font-weight: 750;
+    letter-spacing: -0.35px;
+}
+
+.rn-panel .pk-panel-judul p {
+    margin: 0;
+    color: #738198;
+    font-size: 12px;
+}
+
+/* Area tabel */
+.rn-tabel-wrap {
+    overflow-x: auto;
+    background: #FFFFFF;
+}
+
+.rn-tabel {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.rn-tabel thead th {
+    padding: 14px 16px;
+    border-bottom: 1px solid #E8EDF3;
+    background: #F7F9FC;
+    color: #697991;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 0.65px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.rn-tabel tbody td {
+    padding: 17px 16px;
+    border-bottom: 1px solid #EDF1F5;
+    color: #34445B;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.rn-tabel tbody tr:not(.rn-detail) {
+    transition: background-color 0.18s ease;
+}
+.rn-tabel tbody td.rn-num {
+    color: #43536A;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+.rn-tabel .rn-skala {
+    color: #8995A6;
+    font-size: 11px;
+    font-weight: 400;
+}
+.rn-tabel .rn-nama {
+    color: #20334E;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.5;
+}
+.rn-tabel .rn-nomor {
+    margin-top: 3px;
+    color: #8793A5;
+    font-size: 10px;
+    font-weight: 400;
+}
+.rn-tabel tbody td {
+    padding: 15px 16px;
+}
+
+.rn-tabel tbody tr:not(.rn-detail):hover {
+    background-color: #F8FAFD;
+}
+
+.rn-tabel tbody tr:last-child td {
+    border-bottom-color: transparent;
+}
+
+.rn-tabel .rn-no {
+    width: 48px;
+    color: #94A3B8;
+    text-align: center;
+}
+
+.rn-peserta {
+    min-width: 180px;
+}
+
+.rn-nama {
+    color: #172B49;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.rn-nomor {
+    margin-top: 3px;
+    color: #8794A8;
+    font-size: 11px;
+}
+
+/* Nilai dan status */
+.rn-tabel .rn-num {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.rn-nilai {
+    display: inline-block;
+    color: #243B59;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+.rn-status {
+    display: inline-block;
+    margin: 0 0 0 7px;
+    padding: 3px 7px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.rn-lulus {
+    color: #28734D;
+    background: #F0F7F2;
+    border-color: #DCEBDF;
+}
+
+.rn-remedial {
+    color: #96601F;
+    background: #FCF7EF;
+    border-color: #F0E3CC;
+}
+
+.rn-skala {
+    color: #98A4B5;
+    font-size: 11px;
+}
+
+.rn-mono {
+    color: #475569 !important;
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.rn-waktu {
+    color: #68788F !important;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Tombol review */
+.rn-link {
+    padding: 7px 11px;
+    border: 1px solid #DCE4ED;
+    border-radius: 6px;
+    background: #FFFFFF;
+    color: #34577D;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.rn-link:hover {
+    background: #F4F7FB;
+    border-color: #BFCFE0;
+    color: #203F62;
+}
+
+/* Rincian per materi */
+.rn-detail td {
+    padding: 0 16px 14px !important;
+    background: #F8FAFD;
+}
+
+.rn-detail details {
+    border: 1px solid #E6ECF3;
+    border-radius: 9px;
+    background: #FFFFFF;
+}
+
+.rn-detail summary {
+    padding: 11px 13px;
+    color: #49617D;
+    font-size: 11px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.rn-detail summary:hover {
+    color: #245B94;
+}
+
+.rn-materi {
+    display: grid;
+    gap: 12px;
+    padding: 12px 14px 15px;
+    border-top: 1px solid #EDF1F5;
+}
+
+.rn-materi-item {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) minmax(80px, 1.5fr) 60px;
+    align-items: center;
+    gap: 14px;
+}
+
+.rn-materi-nama {
+    color: #475569;
+    font-size: 11px;
+}
+
+.rn-bar {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: #E9EEF5;
+}
+
+.rn-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+}
+
+.rn-bar > span.lulus {
+    background: #45A779;
+}
+
+.rn-bar > span.kurang {
+    background: #E2A04B;
+}
+
+.rn-materi-skor {
+    color: #52647B;
+    font-size: 11px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Tampilan layar kecil */
+@media (max-width: 640px) {
+    .rn-panel .pk-panel-head {
+        padding: 18px;
+    }
+
+    .rn-materi-item {
+        grid-template-columns: minmax(90px, 1fr) minmax(55px, 1fr) 45px;
+        gap: 9px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rn-tabel tbody tr,
+    .rn-link {
+        transition: none;
+    }
+}
+

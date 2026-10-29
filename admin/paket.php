@@ -134,7 +134,7 @@ foreach ($semua_kat as $k) {
 }
 
 $admin_page        = 'paket';
-$page_title        = 'Kelola Paket — BBU Tryout';
+$page_title        = 'Kelola Paket';
 $topbar_breadcrumb = 'Kelola Paket';
 $topbar_title      = 'Kelola Paket Program';
 

@@ -195,7 +195,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
     // Ambil kunci jawaban + bobot + kategori sekaligus (hindari N+1 query)
     if (!empty($soal_ids)) {
         $id_str    = implode(',', array_map('intval', $soal_ids));
-        $kunci_res = $conn->query("SELECT id, jawaban_benar, bobot, kategori_id FROM soal WHERE id IN ($id_str)");
+        $kunci_res = $conn->query("
+            SELECT id, jawaban_benar, bobot, kategori_id,
+                pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e
+            FROM soal WHERE id IN ($id_str)
+        ");
         while ($k = $kunci_res->fetch_assoc()) {
             $kunci_map[$k['id']] = $k;
         }
@@ -226,6 +230,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
         $jwb    = isset($_POST['jwb_'.$sid2]) && $_POST['jwb_'.$sid2] !== ''
                   ? $_POST['jwb_'.$sid2]
                   : null;
+        if ($jwb !== null && (!$info || !array_key_exists($jwb, opsi_soal($info)))) {
+            $jwb = null;
+        }
         $info   = $kunci_map[$sid2] ?? null;
         $bobot  = $info ? (int)$info['bobot'] : 2; // fallback 2 kalau data tidak ketemu (seharusnya tidak terjadi)
         $kat_id = $info ? (int)$info['kategori_id'] : 0;
@@ -468,14 +475,14 @@ $sisa_detik_awal = hitung_sisa_waktu_detik($hasil_existing, (int)$sesi['durasi_m
             <?php
             $jwb_sudah_dipilih = $jawaban_tersimpan[$soal['id']] ?? null;
             ?>
-            <?php foreach (['A','B','C','D'] as $opt):
+            <?php foreach (opsi_soal($soal) as $opt => $teks_pilihan):
                 $sudah_selected = ($jwb_sudah_dipilih === $opt);
             ?>
             <button type="button" class="jwb-option<?= $sudah_selected ? ' selected' : '' ?>"
                     id="btn-<?= $soal['id'] ?>-<?= $opt ?>"
                     onclick="pilihJawaban(<?= $soal['id'] ?>,'<?= $opt ?>')">
               <span class="jwb-letter" <?= $sudah_selected ? 'style="background:var(--accent);color:#fff;"' : '' ?>><?= $opt ?></span>
-              <span><?= e($soal['pilihan_'.strtolower($opt)]) ?></span>
+              <span><?= e($teks_pilihan) ?></span>
               <input type="radio" name="jwb_<?= $soal['id'] ?>" value="<?= $opt ?>"
                     id="r-<?= $soal['id'] ?>-<?= $opt ?>" style="display:none;"
                     <?= $sudah_selected ? 'checked' : '' ?>>
@@ -509,7 +516,7 @@ $sisa_detik_awal = hitung_sisa_waktu_detik($hasil_existing, (int)$sesi['durasi_m
         <section class="question-palette" id="question-palette">
           <div class="question-palette-heading">
             <div>
-              <h2>Navigasi soal</h2>
+              <h2>Menu soal</h2>
               <p>Pilih nomor untuk berpindah soal</p>
             </div>
             <span class="palette-total" id="palette-total-count">0/<?= count($soal_arr) ?></span>
@@ -785,12 +792,8 @@ function pilihJawaban(soalId, opt) {
     const card = document.getElementById('card-' + soalId);
     if (!card) return;
 
-    ['A','B','C','D'].forEach(o => {
-        const btn = document.getElementById('btn-' + soalId + '-' + o);
-        const inp = document.getElementById('r-' + soalId + '-' + o);
-        if (btn) btn.classList.remove('selected');
-        if (inp) inp.checked = false;
-    });
+    card.querySelectorAll('.jwb-option').forEach(btn => btn.classList.remove('selected'));
+    card.querySelectorAll('input[type="radio"]').forEach(inp => { inp.checked = false; });
 
     const selBtn = document.getElementById('btn-' + soalId + '-' + opt);
     const selInp = document.getElementById('r-' + soalId + '-' + opt);

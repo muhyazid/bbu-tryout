@@ -13,7 +13,7 @@ $tgl_pilih = $_GET['tanggal'] ?? date('Y-m-d');
 $sesi_dipilih = (int) ($_GET['sesi_id'] ?? 0);
 $fna = trim($_GET['nama'] ?? '');
 
-// ── AMBIL DAFTAR SESI SESUAI MODE ────────────────────────────
+// ── AMBIL DAFTAR SESI SESUAI MODE ─────────────────────
 if ($mode === 'hari_ini') {
     $tanggal_aktif = date('Y-m-d');
 } else {
@@ -53,26 +53,46 @@ if ($sesi_dipilih > 0) {
         }
     }
 
-    $where = "WHERE h.sesi_id = ?";
+        $where  = "WHERE h.sesi_id = ?";
     $params = [$sesi_dipilih];
-    $types = "i";
+    $types  = "i";
 
     if ($fna) {
-        $where .= " AND p.nama LIKE ?";
+        $where   .= " AND p.nama LIKE ?";
         $params[] = '%' . $fna . '%';
-        $types .= "s";
+        $types   .= "s";
     }
 
-    $sql = "
-        SELECT h.*, p.nama, p.nomor_peserta,
-               s.nama_sesi, s.mode, pp.nama AS paket_nama
+    // Jumlah total untuk pagination
+    $stc = $conn->prepare("
+        SELECT COUNT(*) AS n
         FROM hasil_ujian h
-        JOIN peserta p    ON h.peserta_id = p.id
-        JOIN sesi_ujian s ON h.sesi_id    = s.id
-        JOIN paket_program pp ON s.paket_id = pp.id
+        JOIN peserta p ON h.peserta_id = p.id
         $where
-        ORDER BY h.submitted_at DESC
+    ");
+    $stc->bind_param($types, ...$params);
+    $stc->execute();
+    $total_rows = (int) $stc->get_result()->fetch_assoc()['n'];
+
+    $per_halaman = 20;
+    $pages       = max(1, (int) ceil($total_rows / $per_halaman));
+    $halaman     = min(max(1, (int) ($_GET['page'] ?? 1)), $pages);
+    $offset      = ($halaman - 1) * $per_halaman;
+
+    $sql = "
+        SELECT h.*, p.nama, p.nomor_peserta, s.nama_sesi, s.mode, pp.nama AS paket_nama
+        FROM hasil_ujian h
+        JOIN peserta p        ON h.peserta_id = p.id
+        JOIN sesi_ujian s     ON h.sesi_id    = s.id
+        JOIN paket_program pp ON s.paket_id   = pp.id
+        $where
+        ORDER BY p.nama ASC
+        LIMIT ? OFFSET ?
     ";
+    $params[] = $per_halaman;
+    $params[] = $offset;
+    $types   .= "ii";
+
     $stmt = $conn->prepare($sql);
     $stmt->bind_param($types, ...$params);
     $stmt->execute();
@@ -200,11 +220,11 @@ include __DIR__ . '/partials/layout-start.php';
       <input type="search" name="nama" value="<?= e($fna) ?>" placeholder="Cari nama peserta..." autocomplete="off">
     </form>
 
-    <section class="pk-panel rn-panel">
+          <section class="pk-panel rn-panel">
       <header class="pk-panel-head">
         <div class="pk-panel-judul">
           <h2><?= e($sesi_aktif_info['nama_sesi']) ?></h2>
-          <p><?= e($sesi_aktif_info['paket_nama']) ?> · <?= date('d M Y', strtotime($tanggal_aktif)) ?> · <?= $hasil->num_rows ?> peserta</p>
+          <p><?= e($sesi_aktif_info['paket_nama']) ?> · <?= date('d M Y', strtotime($tanggal_aktif)) ?> · <?= $total_rows ?> peserta</p>
         </div>
       </header>
 
@@ -212,38 +232,158 @@ include __DIR__ . '/partials/layout-start.php';
       <?php
       $rows = [];
       while ($r = $hasil->fetch_assoc()) $rows[] = $r;
+
+      // Rincian per materi untuk peserta di halaman ini saja
+      $rincian  = [];
+      $ids_hasil = implode(',', array_map(fn($r) => (int) $r['id'], $rows));
+      $res_mat  = $conn->query("
+          SELECT hpm.hasil_ujian_id, k.nama, hpm.total_bobot_didapat, hpm.total_bobot_maksimal
+          FROM hasil_per_materi hpm
+          JOIN kategori k ON k.id = hpm.kategori_id
+          WHERE hpm.hasil_ujian_id IN ($ids_hasil)
+          ORDER BY k.nama
+      ");
+      while ($x = $res_mat->fetch_assoc()) {
+          $rincian[(int) $x['hasil_ujian_id']][] = $x;
+      }
+
+      $nomor = $offset;
       ?>
-      <ul class="ps-list rn-list">
-        <?php
-        $warna_daftar = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777'];
-        foreach ($rows as $r):
-            $lulus   = $r['skor'] >= 70;
-            $m       = floor($r['durasi_detik'] / 60);
-            $d       = $r['durasi_detik'] % 60;
-            $inisial = mb_strtoupper(mb_substr(trim($r['nama']), 0, 2));
-            $warna   = $warna_daftar[(int)$r['peserta_id'] % 6];
-        ?>
-        <li class="ps-row">
-          <div class="ps-row-link ps-row-statis rn-row">
-            <span class="pk-avatar" style="--warna: <?= $warna ?>"><?= e($inisial) ?></span>
-            <span class="ps-info">
-              <span class="ps-nama"><?= e($r['nama']) ?></span>
-              <span class="ps-chips">
-                <span class="ps-chip ps-chip-nomor"><?= e($r['nomor_peserta']) ?></span>
-              </span>
-            </span>
-            <span class="rn-waktu"><?= $m ?> mnt <?= $d ?> dtk</span>
-            <span class="rn-nilai <?= $lulus ? 'lulus' : 'belum' ?>"><?= (int)$r['skor'] ?></span>
-            <span class="rn-status <?= $lulus ? 'lulus' : 'belum' ?>"><?= $lulus ? 'Lulus' : 'Belum' ?></span>
-          </div>
-          <div class="ps-aksi">
-            <a class="ps-ikon" href="<?= url('/review.php?hasil_id=' . (int)$r['id']) ?>" target="_blank" title="Lihat review jawaban">
-              <i class="fas fa-eye"></i>
-            </a>
-          </div>
-        </li>
-        <?php endforeach; ?>
-      </ul>
+
+      <div class="rn-tabel-wrap">
+        <table class="rn-tabel">
+          <thead>
+            <tr>
+              <th class="rn-no">No</th>
+              <th>Peserta</th>
+              <th class="rn-num">Nilai</th>
+              <th class="rn-num">Benar</th>
+              <th class="rn-num">Durasi</th>
+              <th class="rn-waktu">Dikirim</th>
+              <th class="rn-aksi"></th>
+            </tr>
+          </thead>
+          <tbody>
+          <?php foreach ($rows as $r):
+            $lulus  = $r['skor'] >= 70;
+            $materi = $rincian[(int) $r['id']] ?? [];
+            $nomor++;
+            $bulan = [
+                'Jan','Feb','Mar','Apr','Mei','Jun',
+                'Jul','Agu','Sep','Okt','Nov','Des'
+            ];
+            $t_kirim = strtotime($r['submitted_at']);
+            $kirim = date('j', $t_kirim) . ' '
+                . $bulan[(int)date('n', $t_kirim) - 1]
+                . ' · ' . date('H:i', $t_kirim);
+            $durasi = sprintf(
+                '%02d:%02d',
+                floor((int)$r['durasi_detik'] / 60),
+                (int)$r['durasi_detik'] % 60
+            );
+          ?>
+            <tr>
+                <td class="rn-no"><?= $nomor ?></td>
+                <td class="rn-peserta">
+                  <div class="rn-nama"><?= e($r['nama']) ?></div>
+                  <div class="rn-nomor"><?= e($r['nomor_peserta']) ?></div>
+                </td>
+                <td class="rn-num">
+                  <span class="rn-nilai">
+                    <?= number_format((float)$r['skor'], 0) ?>
+                  </span>
+                  <span class="rn-status <?= $lulus ? 'rn-lulus' : 'rn-remedial' ?>">
+                    <?= $lulus ? 'Lulus' : 'Belum lulus' ?>
+                  </span>
+                </td>
+                <td class="rn-num">
+                    <?= (int)$r['total_benar'] ?>
+                    <span class="rn-skala">/ <?= (int)$r['total_soal'] ?></span>
+                </td>
+                <td class="rn-num rn-mono"><?= $durasi ?></td>
+                <td class="rn-waktu"><?= e($kirim) ?></td>
+                <td class="rn-aksi">
+                    <a
+                        class="rn-link"
+                        href="<?= url('/review.php?hasil_id=' . (int)$r['id']) ?>"
+                        target="_blank"
+                        rel="noopener"
+                    >Review ↗</a>
+                </td>
+            </tr>
+
+            <?php if (count($materi) > 1): ?>
+              <tr class="rn-detail">
+                  <td colspan="7">
+                      <details>
+                          <summary>Rincian per materi (<?= count($materi) ?>)</summary>
+                          <div class="rn-materi">
+                              <?php foreach ($materi as $x):
+                                  $persen = (float)$x['total_bobot_maksimal'] > 0
+                                      ? round(
+                                          $x['total_bobot_didapat']
+                                          / $x['total_bobot_maksimal'] * 100
+                                      )
+                                      : 0;
+                              ?>
+                              <div class="rn-materi-item">
+                                  <span class="rn-materi-nama">
+                                      <?= e($x['nama']) ?>
+                                  </span>
+                                  <span class="rn-bar">
+                                      <span
+                                          class="<?= $persen >= 70 ? 'lulus' : 'kurang' ?>"
+                                          style="width: <?= min(100, max(0, $persen)) ?>%"
+                                      ></span>
+                                  </span>
+                                  <span class="rn-materi-skor">
+                                      <?= (int)$x['total_bobot_didapat'] ?>/<?= (int)$x['total_bobot_maksimal'] ?>
+                                  </span>
+                              </div>
+                              <?php endforeach; ?>
+                          </div>
+                      </details>
+                  </td>
+              </tr>
+              <?php endif; ?>
+              <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+
+      <?php if ($pages > 1):
+          $url_halaman = fn(int $p) => url('/admin/hasil.php?' . http_build_query(array_merge($_GET, ['page' => $p])));
+          $awal  = max(1, $halaman - 2);
+          $akhir = min($pages, $halaman + 2);
+      ?>
+      <nav class="rn-halaman" aria-label="Halaman">
+        <span class="rn-info">
+          <?= $offset + 1 ?>–<?= min($offset + $per_halaman, $total_rows) ?> dari <?= $total_rows ?>
+        </span>
+        <div class="rn-halaman-tombol">
+          <?php if ($halaman > 1): ?>
+            <a href="<?= $url_halaman($halaman - 1) ?>" aria-label="Halaman sebelumnya">‹</a>
+          <?php else: ?>
+            <span class="mati">‹</span>
+          <?php endif; ?>
+
+          <?php for ($p = $awal; $p <= $akhir; $p++): ?>
+            <?php if ($p === $halaman): ?>
+              <span class="aktif" aria-current="page"><?= $p ?></span>
+            <?php else: ?>
+              <a href="<?= $url_halaman($p) ?>"><?= $p ?></a>
+            <?php endif; ?>
+          <?php endfor; ?>
+
+          <?php if ($halaman < $pages): ?>
+            <a href="<?= $url_halaman($halaman + 1) ?>" aria-label="Halaman berikutnya">›</a>
+          <?php else: ?>
+            <span class="mati">›</span>
+          <?php endif; ?>
+        </div>
+      </nav>
+      <?php endif; ?>
+
       <?php else: ?>
       <div class="empty-state">
         <p><strong>Belum ada peserta yang menyelesaikan sesi ini</strong></p>
@@ -252,6 +392,5 @@ include __DIR__ . '/partials/layout-start.php';
       <?php endif; ?>
     </section>
     <?php endif; ?>
-
 
 <?php include __DIR__ . '/partials/layout-end.php'; ?>

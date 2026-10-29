@@ -196,7 +196,7 @@ require_once dirname(__DIR__) . '/config.php';
 cekAdmin();
 
 $admin_page = 'dashboard'; // sesuaikan menu
-$page_title = 'Judul — BBU Tryout';
+$page_title = 'Judul - BBU Tryout';
 
 include __DIR__ . '/partials/layout-start.php';
 ?>

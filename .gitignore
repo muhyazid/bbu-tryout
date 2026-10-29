@@ -1,14 +1,19 @@
-# Konfigurasi database (jangan diupload)
+# Konfigurasi dan rahasia
 config.php
+database.php
 
-# Cache dan log sistem
-*.log
-*.tmp
-
-# OS files
-.DS_Store
-Thumbs.db
+# Utilitas pengembangan
+check_schema.php
+generate_hash.php
 
 # Editor
 .vscode/
+.cursor/
 .idea/
+
+# Sistem operasi
+Thumbs.db
+.DS_Store
+
+# Log
+*.log

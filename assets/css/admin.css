@@ -20,15 +20,7 @@ body {
 }
 
 /* ─── SIDEBAR ─────────────────────────────────────────────── */
-.sidebar {
-  width: 220px;
-  background: var(--navy);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  overflow: hidden;
-  height: 100vh;
-}
+
 
 /* Logo area */
 .sidebar-logo {
@@ -620,347 +612,24 @@ body {
 }
 
 /* ============================================================
-   TAMBAHAN — Halaman Kelola Paket (admin/paket.php)
-   ============================================================ */
-
-.paket-checklist {
-  display: flex;
-  flex-direction: column;
-}
-
-.paket-check-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 13px 18px;
-  border-bottom: 1px solid #F1F5F9;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.paket-check-row:last-child { border-bottom: none; }
-.paket-check-row:hover { background: #FAFBFC; }
-
-.paket-check-row input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.paket-check-name {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.badge-paket {
-  background: #EFF6FF;
-  color: #1D4ED8;
-}
-
-/* ============================================================
-   TAMBAHAN — Card statistik Rekap Nilai
-   ============================================================ */
-
-.rekap-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.rekap-stat-card {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 18px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  box-shadow: var(--shadow-sm);
-}
-
-.rekap-stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 18px;
-}
-.rekap-stat-icon--success { background: var(--success-bg); color: var(--success); }
-.rekap-stat-icon--accent  { background: var(--accent-light); color: var(--accent); }
-
-.rekap-stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1;
-}
-.rekap-stat-value span {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.rekap-stat-label {
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-}
-
-.rekap-stat-note {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 20px;
-  font-style: italic;
-}
-
-/* ============================================================
-   TAMBAHAN — Section label pengelompokan menu sidebar
-   ============================================================ */
-
-.nav-section-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.35);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  padding: 16px 10px 6px;
-  white-space: nowrap;
-}
-
-.nav-section-label:first-of-type {
-  padding-top: 12px;
-}
-
-/* ============================================================
    KELOLA PAKET — v2
    ============================================================ */
 
 [hidden] { display: none !important; }
 button:disabled { opacity: .5; cursor: not-allowed; }
 
-.paket-intro {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  max-width: 640px;
-  margin-bottom: 18px;
-}
-
-/* Tab paket */
-.paket-tabs {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-.paket-tab {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 170px;
-  padding: 12px 16px;
-  background: #FFFFFF;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text-primary);
-  text-decoration: none;
-  transition: border-color .15s, box-shadow .15s;
-}
-.paket-tab:hover { border-color: var(--border-strong); }
-.paket-tab-nama { font-size: 14.5px; font-weight: 600; }
-.paket-tab-info { font-size: 12.5px; color: var(--text-muted); }
-.paket-tab.aktif {
-  border-color: var(--navy);
-  box-shadow: inset 0 -3px 0 var(--navy);
-}
-.paket-tab.aktif .paket-tab-info { color: var(--text-secondary); }
-
-/* Kartu paket */
-.paket-card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 14px 16px;
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
-}
-.paket-card-head h2 { font-size: 18px; font-weight: 700; color: var(--navy); }
-.paket-card-head p  { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-.paket-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.paket-actions button { display: inline-flex; align-items: center; gap: 7px; }
-
-/* Ringkasan */
-.paket-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-bottom: 1px solid var(--border);
-}
-.paket-stat { padding: 16px 20px; border-right: 1px solid var(--border); }
-.paket-stat:last-child { border-right: 0; }
-.paket-stat-val { font-size: 21px; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
-.paket-stat-lbl { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
-
-/* Peringatan mode ubah */
-.paket-warning {
-  margin: 16px 20px 0;
-  padding: 12px 14px;
-  background: var(--warning-bg);
-  border: 1px solid #FDE68A;
-  border-radius: 10px;
-  color: #92400E;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-/* Pencarian (hanya mode ubah) */
-.paket-toolbar { padding: 14px 20px; border-bottom: 1px solid var(--border); }
-.paket-toolbar input {
-  width: 100%;
-  max-width: 320px;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-}
-.paket-toolbar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
-.paket-card:not(.is-editing) .paket-toolbar { display: none; }
-
-/* Daftar materi */
-.paket-list { list-style: none; margin: 0; padding: 4px 0; }
-.paket-row { border-bottom: 1px solid #F1F5F9; }
-.paket-row:last-child { border-bottom: 0; }
-.paket-row:hover { background: #FAFBFC; }
-.paket-row.terpilih { background: #F8FBFF; }
-
-/* Mode baca: hanya materi yang termasuk */
-.paket-card:not(.is-editing) .paket-row:not(.terpilih) { display: none; }
-.paket-card:not(.is-editing) .paket-row-label { cursor: default; }
-
-.paket-row-label {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 13px 20px;
-  cursor: pointer;
-}
-.paket-row-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-.paket-card:not(.is-editing) .paket-row-label input[type="checkbox"] { display: none; }
-
-.paket-row-nama {
-  flex: 1;
-  font-size: 14.5px;
-  font-weight: 500;
-  color: var(--text-primary);
-  min-width: 0;
-}
-.paket-row:not(.terpilih) .paket-row-nama { color: var(--text-muted); }
-
-.paket-row-soal {
-  font-size: 13px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-.paket-row-tag {
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 20px;
-  background: #DCFCE7;
-  color: #166534;
-  white-space: nowrap;
-}
-.paket-card.is-editing .paket-row-tag,
-.paket-row:not(.terpilih) .paket-row-tag { display: none; }
-
-.paket-kosong {
-  padding: 40px 20px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-/* Modal konfirmasi */
-.konf-intro { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-.konf-blok { margin-top: 14px; }
-.konf-judul { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-.konf-judul.tambah { color: #047857; }
-.konf-judul.hapus  { color: #B91C1C; }
-.konf-blok ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 180px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-.konf-blok li {
-  padding: 9px 12px;
-  font-size: 14px;
-  border-bottom: 1px solid #F1F5F9;
-}
-.konf-blok li:last-child { border-bottom: 0; }
-.konf-catatan { margin-top: 14px; font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
-.konf-error {
-  margin-top: 14px;
-  padding: 10px 12px;
-  background: var(--danger-bg);
-  border: 1px solid #FECACA;
-  border-radius: 8px;
-  color: #B91C1C;
-  font-size: 13.5px;
-}
-
-@media (max-width: 720px) {
-  .paket-stats { grid-template-columns: repeat(2, 1fr); }
-  .paket-stat { border-right: 0; border-bottom: 1px solid var(--border); }
-  .paket-stat:last-child { border-bottom: 0; }
-  .paket-row-soal { display: none; }
-}
-
 /* ============================================================
    BANK SOAL — v2
    ============================================================ */
 
 /* Ringkasan & tombol tambah materi */
-.bs-ringkas {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
+
 .bs-ringkas strong {
   font-size: 20px;
   color: var(--text-primary);
   margin-right: 6px;
 }
-.bs-tambah {
-  margin-left: auto;
-  height: 42px;
-  padding: 0 18px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-}
+
 
 /* Pencarian */
 .bs-cari {
@@ -993,11 +662,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 }
 
 /* Daftar materi */
-.bs-row {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid #F1F5F9;
-}
+
 .bs-row:last-child { border-bottom: 0; }
 .bs-row:hover { background: #FAFBFC; }
 .bs-row-main {
@@ -1205,10 +870,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .main-inner > * { max-width: 100%; min-width: 0; }
 
 .paket-card,
-.paket-tabs,
-.paket-list { min-width: 0; max-width: 100%; }
 
-.paket-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* ============================================================
    BANK SOAL — daftar materi v3
@@ -1911,103 +1573,6 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 }
 
 /* ============================================================
-   SESI UJIAN — v4 (memakai komponen dari peserta, paket, kelompok)
-   ============================================================ */
-
-/* Status nonaktif (abu-abu) untuk pill sesi */
-.kl-status.ss-nonaktif { background: #F1F5F9; color: #64748B; }
-.ss-toggle { text-decoration: none; cursor: pointer; }
-.ss-toggle:hover { filter: brightness(.97); }
-.ss-nonaktif .kl-titik { background: #94A3B8; }
-
-/* Tanda "Tampil ke peserta" */
-.ss-tampil {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 2px 9px;
-  border-radius: 20px;
-  background: #DBEAFE;
-  color: #1E40AF;
-  font-size: 11.5px;
-  font-weight: 700;
-  vertical-align: middle;
-}
-
-/* Chip mode */
-.ss-chip-ujian   { background: #FEE2E2; color: #991B1B; }
-.ss-chip-latihan { background: #FEF3C7; color: #92400E; }
-
-/* Panel form */
-.ss-form { margin-bottom: 22px; }
-.ss-form-body { padding: 22px; }
-.ss-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px 18px;
-}
-.ss-full { grid-column: 1 / -1; }
-.ss-jam  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-.ss-label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-.ss-form-body .form-input { height: 46px; font-size: 15px; border-radius: 10px; }
-.ss-form-body select.form-input { padding-right: 36px; }
-.ss-hint {
-  display: block;
-  margin-top: 6px;
-  font-size: 12.5px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-.ss-info-soal {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  padding: 14px 16px;
-  background: #F8FAFC;
-  border: 1px dashed #CBD5E1;
-  border-radius: 12px;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-.ss-info-soal span { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
-
-.ss-catatan {
-  padding: 14px 16px;
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  border-radius: 12px;
-  font-size: 14px;
-  color: #1E40AF;
-  line-height: 1.6;
-}
-
-.ss-aksi {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
-}
-.ss-aksi .pk-btn { height: 44px; }
-
-@media (max-width: 720px) {
-  .ss-grid { grid-template-columns: 1fr; }
-  .ss-jam  { grid-template-columns: 1fr; }
-  .ss-aksi { flex-direction: column-reverse; }
-  .ss-aksi .pk-btn { width: 100%; justify-content: center; }
-  .ss-tampil { display: block; margin: 6px 0 0; width: fit-content; }
-}
-
-/* ============================================================
    SESI UJIAN — v5 (form dua kolom: isian + pratinjau)
    ============================================================ */
 
@@ -2344,51 +1909,11 @@ select.ss-input { padding-right: 36px; cursor: pointer; }
 
 /* Panel hasil */
 .rn-panel { margin-bottom: 8px; }
-.rn-list { padding: 8px 14px 14px; }
-
-.rn-row { gap: 14px; }
-.rn-row .ps-info { flex: 1; }
-.rn-waktu {
-  font-size: 13px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  min-width: 92px;
-  text-align: right;
-}
-.rn-nilai {
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1;
-  min-width: 56px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.rn-nilai.lulus { color: #047857; }
-.rn-nilai.belum { color: #B91C1C; }
-
-.rn-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 78px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 12.5px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.rn-status.lulus { background: #DCFCE7; color: #166534; }
-.rn-status.belum { background: #FEE2E2; color: #991B1B; }
 
 @media (max-width: 720px) {
   .rn-mode { display: flex; width: 100%; }
   .rn-mode-btn { flex: 1; text-align: center; padding: 10px 8px; }
   .rn-cari { max-width: none; }
-  .rn-row { flex-wrap: wrap; }
-  .rn-waktu { min-width: 0; text-align: left; order: 5; width: 100%; padding-left: 0; }
-  .rn-nilai { min-width: 48px; font-size: 22px; }
-  .rn-status { min-width: 0; }
-  .rn-row .ps-info { min-width: 0; }
 }
 
 /* ============================================================

@@ -177,67 +177,134 @@ if ($butuh_metadata_baru && !empty($soal_ids)) {
     $_SESSION[$skey]['mapel_ranges'] = $mapel_ranges;
 }
 
-
-// ── HANDLE SUBMIT ─────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
-    // Sudah pernah dikirim: jangan proses ulang
+    // Cegah replay/double-submit: tolak kalau status sudah 'selesai'
     if ($hasil_existing && $hasil_existing['status_pengerjaan'] === 'selesai') {
         redirect('/peserta/dashboard.php');
     }
 
-    // 1. Jawaban dari form hanya diterima jika ujian masih berjalan.
-    //    Setiap jawaban divalidasi lewat fungsi yang sama dengan autosave.
-    if (!waktu_habis($hasil_existing, (int) $sesi['durasi_menit'])) {
-        foreach ($soal_ids as $sid) {
-            $nilai = $_POST['jwb_' . $sid] ?? null;
-            if ($nilai !== null && $nilai !== '') {
-                simpan_jawaban_server($conn, $peserta_id, $sesi_id, (int) $sid, $nilai);
+    $total = count($soal_ids);
+
+}
+// ── HANDLE SUBMIT ─────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ujian'])) {
+    $total = count($soal_ids);
+    $benar = 0;
+    $kunci_map = []; // soal_id => ['jawaban_benar' => 'A', 'bobot' => 2, 'kategori_id' => 5]
+
+    // Ambil kunci jawaban + bobot + kategori sekaligus (hindari N+1 query)
+    if (!empty($soal_ids)) {
+        $id_str    = implode(',', array_map('intval', $soal_ids));
+        $kunci_res = $conn->query("
+            SELECT id, jawaban_benar, bobot, kategori_id,
+                pilihan_a, pilihan_b, pilihan_c, pilihan_d, pilihan_e
+            FROM soal WHERE id IN ($id_str)
+        ");
+        while ($k = $kunci_res->fetch_assoc()) {
+            $kunci_map[$k['id']] = $k;
+        }
+    }
+
+    // Akumulasi nilai per kategori sambil looping jawaban
+    $rekap_per_kategori = []; // kategori_id => ['didapat' => x, 'maksimal' => y]
+    $total_bobot_didapat  = 0;
+    $total_bobot_maksimal = 0;
+
+    // Ambil jawaban autosave yang sudah ada dalam satu query, agar submit tetap efisien
+    // walaupun paket memuat ratusan butir.
+    $jawaban_existing = [];
+    $ambil_jawaban_existing = $conn->prepare("SELECT id, soal_id FROM jawaban WHERE peserta_id=? AND sesi_id=? ORDER BY id ASC");
+    $ambil_jawaban_existing->bind_param("ii", $peserta_id, $sesi_id);
+    $ambil_jawaban_existing->execute();
+    $jawaban_existing_res = $ambil_jawaban_existing->get_result();
+    while ($row_jwb_existing = $jawaban_existing_res->fetch_assoc()) {
+        $existing_soal_id = (int)$row_jwb_existing['soal_id'];
+        if (!isset($jawaban_existing[$existing_soal_id])) {
+            $jawaban_existing[$existing_soal_id] = (int)$row_jwb_existing['id'];
+        }
+    }
+    $upd_jawaban = $conn->prepare("UPDATE jawaban SET jawaban_dipilih=?, is_benar=? WHERE id=?");
+    $ins_jawaban = $conn->prepare("INSERT INTO jawaban (peserta_id,sesi_id,soal_id,jawaban_dipilih,is_benar) VALUES (?,?,?,?,?)");
+
+    foreach ($soal_ids as $sid2) {
+        $jwb    = isset($_POST['jwb_'.$sid2]) && $_POST['jwb_'.$sid2] !== ''
+                  ? $_POST['jwb_'.$sid2]
+                  : null;
+        if ($jwb !== null && (!$info || !array_key_exists($jwb, opsi_soal($info)))) {
+            $jwb = null;
+        }
+        $info   = $kunci_map[$sid2] ?? null;
+        $bobot  = $info ? (int)$info['bobot'] : 2; // fallback 2 kalau data tidak ketemu (seharusnya tidak terjadi)
+        $kat_id = $info ? (int)$info['kategori_id'] : 0;
+
+        $ib = ($jwb && $info && $jwb === $info['jawaban_benar']) ? 1 : 0;
+        if ($ib) $benar++;
+
+        // Akumulasi ke rekap per kategori
+        if (!isset($rekap_per_kategori[$kat_id])) {
+            $rekap_per_kategori[$kat_id] = ['didapat' => 0, 'maksimal' => 0];
+        }
+        $rekap_per_kategori[$kat_id]['maksimal'] += $bobot;
+        if ($ib) {
+            $rekap_per_kategori[$kat_id]['didapat'] += $bobot;
+        }
+
+        $total_bobot_maksimal += $bobot;
+        if ($ib) {
+            $total_bobot_didapat += $bobot;
+        }
+
+        // Auto-save mungkin sudah membuat baris jawaban. Perbarui baris itu saat submit
+        // supaya satu soal tidak mendapatkan baris baru setiap kali dikirim.
+        if (isset($jawaban_existing[$sid2])) {
+            $jawaban_id = (int)$jawaban_existing[$sid2];
+            $upd_jawaban->bind_param("sii", $jwb, $ib, $jawaban_id);
+            if (!$upd_jawaban->execute()) {
+                error_log("Gagal update jawaban: soal_id=$sid2, peserta_id=$peserta_id");
+            }
+        } else {
+            $ins_jawaban->bind_param("iiisi", $peserta_id, $sesi_id, $sid2, $jwb, $ib);
+            if (!$ins_jawaban->execute()) {
+                error_log("Gagal insert jawaban: soal_id=$sid2, peserta_id=$peserta_id");
             }
         }
     }
 
-    // 2. Skor dihitung dari tabel jawaban, bukan dari POST
-    $h = hitung_hasil($conn, $peserta_id, $sesi_id, $soal_ids);
+    $salah  = $total - $benar;
+    // Skor total tetap dihitung dari bobot (bukan lagi jumlah soal biasa)
+    $skor   = $total_bobot_maksimal > 0 ? round($total_bobot_didapat / $total_bobot_maksimal * 100) : 0;
+    $durasi = (int)($_POST['durasi_detik'] ?? 0);
 
-    // 3. Durasi dihitung di server
-    $durasi_maks = (int) $sesi['durasi_menit'] * 60;
-    $sisa        = hitung_sisa_waktu_detik($hasil_existing, (int) $sesi['durasi_menit']);
-    $durasi      = max(0, min($durasi_maks, $durasi_maks - $sisa));
-
-    $upd = $conn->prepare("
+    $ins2 = $conn->prepare("
         UPDATE hasil_ujian
         SET total_soal=?, total_benar=?, total_salah=?, skor=?, durasi_detik=?,
             status_pengerjaan='selesai', submitted_at=NOW()
         WHERE peserta_id=? AND sesi_id=?
     ");
-    $upd->bind_param("iiiiiii", $h['total'], $h['benar'], $h['salah'], $h['skor'], $durasi, $peserta_id, $sesi_id);
-    $upd->execute();
+    $ins2->bind_param("iiiiiii", $total, $benar, $salah, $skor, $durasi, $peserta_id, $sesi_id);
+    if ($ins2->execute()) {
+        $hasil_ujian_id = $hasil_existing['id'];
 
-    $hasil_ujian_id = (int) $hasil_existing['id'];
-    $ins_materi = $conn->prepare("
-        INSERT INTO hasil_per_materi (hasil_ujian_id, kategori_id, total_bobot_didapat, total_bobot_maksimal)
-        VALUES (?,?,?,?)
-    ");
-    foreach ($h['per_kategori'] as $kat_id => $r) {
-        $ins_materi->bind_param("iiii", $hasil_ujian_id, $kat_id, $r['didapat'], $r['maksimal']);
-        if (!$ins_materi->execute()) {
-            error_log("Gagal insert hasil_per_materi: kategori=$kat_id hasil=$hasil_ujian_id");
+        // Simpan rincian nilai per materi
+        $ins_materi = $conn->prepare("INSERT INTO hasil_per_materi (hasil_ujian_id, kategori_id, total_bobot_didapat, total_bobot_maksimal) VALUES (?,?,?,?)");
+        foreach ($rekap_per_kategori as $kat_id => $rekap) {
+            if ($kat_id === 0) continue; // lewati kalau ada data tidak valid
+            $ins_materi->bind_param("iiii", $hasil_ujian_id, $kat_id, $rekap['didapat'], $rekap['maksimal']);
+            if (!$ins_materi->execute()) {
+                error_log("Gagal insert hasil_per_materi: kategori_id=$kat_id, hasil_ujian_id=$hasil_ujian_id");
+            }
         }
+    } else {
+        error_log("Gagal insert hasil ujian: peserta_id=$peserta_id, sesi_id=$sesi_id");
     }
 
-    $lg = $conn->prepare("INSERT INTO log_aktivitas (peserta_id, sesi_id, jenis) VALUES (?,?,'submit')");
+    $lg = $conn->prepare("INSERT INTO log_aktivitas (peserta_id,sesi_id,jenis) VALUES (?,?,'submit')");
     $lg->bind_param("ii", $peserta_id, $sesi_id);
     $lg->execute();
 
     unset($_SESSION[$skey]);
     $phase  = 'result';
-    $result = [
-        'skor'   => $h['skor'],
-        'benar'  => $h['benar'],
-        'salah'  => $h['salah'],
-        'total'  => $h['total'],
-        'durasi' => $durasi,
-    ];
+    $result = compact('skor','benar','salah','total','durasi');
 }
 
 // ── MUAT SOAL UNTUK TAMPILAN ──────────────────────────────

@@ -1,12 +1,4 @@
 <?php
-/**
- * Awal layout admin. Set sebelum include:
- *   $admin_page        — kunci menu aktif (dashboard|soal|paket|peserta|kelompok|sesi|hasil|log)
- *   $page_title        — judul tab browser
- *   $topbar_breadcrumb — (opsional) teks breadcrumb kecil di topbar
- *   $topbar_title      — (opsional) judul besar di topbar
- *   $extra_head        — (opsional) HTML tambahan di <head>
- */
 $admin_page = $admin_page ?? '';
 $page_title = $page_title ?? 'Panel Admin';
 require_once __DIR__ . '/icons.php';

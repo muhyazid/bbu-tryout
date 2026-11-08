@@ -88,20 +88,23 @@ if ($status_row['status_pengerjaan'] === 'dijeda') {
 
 $is_benar = ($jawaban !== null && $jawaban === $soal['jawaban_benar']) ? 1 : 0;
 
-// Upsert manual (cek dulu, baru update/insert)
-$cek = $conn->prepare("SELECT id FROM jawaban WHERE peserta_id=? AND sesi_id=? AND soal_id=?");
-$cek->bind_param("iii", $peserta_id, $sesi_id, $soal_id);
-$cek->execute();
-$existing = $cek->get_result()->fetch_assoc();
+require_once dirname(__DIR__) . '/includes/penilaian.php';
+// ... setelah $peserta_id, $sesi_id, dan $data sudah diambil ...
 
-if ($existing) {
-    $upd = $conn->prepare("UPDATE jawaban SET jawaban_dipilih=?, is_benar=? WHERE id=?");
-    $upd->bind_param("sii", $jawaban, $is_benar, $existing['id']);
-    $ok = $upd->execute();
-} else {
-    $ins = $conn->prepare("INSERT INTO jawaban (peserta_id,sesi_id,soal_id,jawaban_dipilih,is_benar) VALUES (?,?,?,?,?)");
-    $ins->bind_param("iiisi", $peserta_id, $sesi_id, $soal_id, $jawaban, $is_benar);
-    $ok = $ins->execute();
+$sesi = validasi_sesi_peserta($conn, $sesi_id, (int) $_SESSION['peserta_paket_id']);
+if (!$sesi) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'error' => 'Sesi tidak valid']);
+    exit;
 }
 
-echo json_encode(['ok' => (bool) $ok]);
+$cek = $conn->prepare("SELECT * FROM hasil_ujian WHERE peserta_id=? AND sesi_id=?");
+$cek->bind_param("ii", $peserta_id, $sesi_id);
+$cek->execute();
+$hasil = $cek->get_result()->fetch_assoc();
+
+if (!$hasil || $hasil['status_pengerjaan'] !== 'sedang_dikerjakan' || waktu_habis($hasil, (int) $sesi['durasi_menit'])) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'error' => 'Ujian tidak sedang berjalan']);
+    exit;
+}
